@@ -2,13 +2,12 @@ import streamlit as st
 import httpx
 import pandas as pd
 from datetime import datetime
+import streamlit.components.v1 as components
 
 # --- Configuration ---
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 
-# Comprehensive WMO Weather interpretation codes (WW)
-# https://open-meteo.com/en/docs
 WMO_CODES = {
     0: ("Clear sky", "☀️"),
     1: ("Mainly clear", "🌤️"),
@@ -45,37 +44,35 @@ def get_coordinates(city: str, country: str | None = None) -> dict | None:
     query = city.strip()
     if not query:
         return None
-    
     if country and country.strip():
         query += f", {country.strip()}"
-    
     params = {"name": query, "count": 1, "language": "en", "format": "json"}
     response = httpx.get(GEOCODING_API_URL, params=params, timeout=10)
     response.raise_for_status()
     data = response.json()
-    if "results" in data and len(data["results"]) > 0:
-        return data["results"][0]
-    return None
+    return data["results"][0] if "results" in data and data["results"] else None
 
 def get_weather(lat: float, lon: float) -> dict | None:
-    """Fetch weather data for given coordinates."""
+    """Fetch 14-day weather data including 15-minute resolution for the next few days."""
     params = {
         "latitude": lat,
         "longitude": lon,
         "current_weather": "true",
-        "daily": "temperature_2m_max,temperature_2m_min,weathercode",
+        "minutely_15": "temperature_2m,precipitation,weathercode",
+        "daily": "temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max",
         "timezone": "auto",
+        "forecast_days": 14
     }
     response = httpx.get(WEATHER_API_URL, params=params, timeout=10)
     response.raise_for_status()
     return response.json()
 
 def main():
-    st.set_page_config(page_title="Weather App", page_icon="🌤️")
-    st.title("Weather App 🌤️")
-    st.write("Get real-time weather and 7-day forecast without an API key.")
-
-    col1, col2 = st.columns(2)
+    st.set_page_config(page_title="Advanced Weather App", page_icon="🌤️", layout="wide")
+    
+    st.title("Advanced Weather Dashboard 🌤️")
+    
+    col1, col2 = st.columns([1, 1])
     with col1:
         city = st.text_input("City", placeholder="e.g. London")
     with col2:
@@ -83,74 +80,81 @@ def main():
 
     if city:
         try:
-            with st.spinner(f"Fetching weather for {city}..."):
-                location_data = get_coordinates(city, country)
-                
-                if location_data:
-                    lat = location_data.get("latitude")
-                    lon = location_data.get("longitude")
-                    name = location_data.get("name", city)
-                    country_name = location_data.get("country", "")
+            with st.spinner(f"Analyzing weather for {city}..."):
+                location = get_coordinates(city, country)
+                if location:
+                    lat, lon = location["latitude"], location["longitude"]
+                    weather = get_weather(lat, lon)
                     
-                    if lat is None or lon is None:
-                        st.error("Invalid coordinates received for this location.")
-                        return
-
-                    weather_data = get_weather(lat, lon)
-                    
-                    if weather_data and "current_weather" in weather_data:
-                        current = weather_data["current_weather"]
-                        code = current.get("weathercode", -1)
-                        wmo_desc, emoji = WMO_CODES.get(code, ("Unknown", "❓"))
+                    if weather:
+                        tab1, tab2, tab3, tab4 = st.tabs(["Current & Radar", "15-Min Forecast", "14-Day Forecast", "Monthly Overview"])
                         
-                        st.header(f"{name}, {country_name}")
-                        
-                        # Current Weather Metrics
-                        m1, m2, m3 = st.columns(3)
-                        m1.metric("Temperature", f"{current.get('temperature', 'N/A')}°C")
-                        m2.metric("Wind Speed", f"{current.get('windspeed', 'N/A')} km/h")
-                        m3.metric("Condition", f"{emoji} {wmo_desc}")
-                        
-                        # Forecast Chart
-                        if "daily" in weather_data:
-                            st.subheader("7-Day Temperature Forecast")
-                            daily = weather_data["daily"]
+                        with tab1:
+                            st.header(f"{location['name']}, {location.get('country', '')}")
+                            c1, c2, c3 = st.columns(3)
+                            curr = weather["current_weather"]
+                            wmo, emoji = WMO_CODES.get(curr["weathercode"], ("Unknown", "❓"))
+                            c1.metric("Temperature", f"{curr['temperature']}°C")
+                            c2.metric("Wind Speed", f"{curr['windspeed']} km/h")
+                            c3.metric("Condition", f"{emoji} {wmo}")
                             
-                            # Ensure required keys exist in daily
-                            if all(k in daily for k in ["time", "temperature_2m_max", "temperature_2m_min"]):
-                                df = pd.DataFrame({
-                                    "Date": pd.to_datetime(daily["time"]),
-                                    "Max Temp (°C)": daily["temperature_2m_max"],
-                                    "Min Temp (°C)": daily["temperature_2m_min"]
-                                })
-                                df.set_index("Date", inplace=True)
-                                st.line_chart(df)
-                                
-                                # Forecast Table
-                                with st.expander("Show detailed forecast"):
-                                    forecast_details = []
-                                    for i in range(len(daily["time"])):
-                                        code = daily.get("weathercode", [])[i] if "weathercode" in daily else -1
-                                        desc, e = WMO_CODES.get(code, ("Unknown", "❓"))
-                                        forecast_details.append({
-                                            "Date": daily["time"][i],
-                                            "Max (°C)": daily["temperature_2m_max"][i],
-                                            "Min (°C)": daily["temperature_2m_min"][i],
-                                            "Condition": f"{e} {desc}"
-                                        })
-                                    st.table(pd.DataFrame(forecast_details))
+                            st.subheader("Live Weather Radar")
+                            # RainViewer Radar Iframe
+                            radar_url = f"https://www.rainviewer.com/map.html?lat={lat}&lon={lon}&zoom=6&type=1&size=512&color=1&tm=1&v=1"
+                            components.iframe(radar_url, height=500)
+                            st.caption("Radar data provided by RainViewer")
+
+                        with tab2:
+                            st.subheader("High-Resolution 15-Minute Forecast")
+                            if "minutely_15" in weather:
+                                m15 = weather["minutely_15"]
+                                df15 = pd.DataFrame({
+                                    "Time": pd.to_datetime(m15["time"]),
+                                    "Temp (°C)": m15["temperature_2m"],
+                                    "Rain (mm)": m15["precipitation"]
+                                }).set_index("Time")
+                                # Show first 48 hours for clarity
+                                st.line_chart(df15.head(48*4)) 
                             else:
-                                st.warning("Forecast data is incomplete.")
-                        else:
-                            st.warning("Forecast data not available.")
-                    else:
-                        st.error("Could not fetch current weather data.")
+                                st.info("15-minute data not available for this location.")
+
+                        with tab3:
+                            st.subheader("14-Day Extended Forecast")
+                            daily = weather["daily"]
+                            df_daily = pd.DataFrame({
+                                "Date": pd.to_datetime(daily["time"]),
+                                "Max Temp (°C)": daily["temperature_2m_max"],
+                                "Min Temp (°C)": daily["temperature_2m_min"],
+                                "Rain Chance (%)": daily["precipitation_probability_max"]
+                            }).set_index("Date")
+                            
+                            st.area_chart(df_daily[["Max Temp (°C)", "Min Temp (°C)"]])
+                            
+                            st.dataframe(df_daily, use_container_width=True)
+
+                        with tab4:
+                            # Month view (Current month context for the 14 days)
+                            month_name = datetime.now().strftime("%B %Y")
+                            st.subheader(f"Overview: {month_name}")
+                            
+                            # Calendar-like view using columns for the 14 days
+                            for i in range(0, 14, 7):
+                                cols = st.columns(7)
+                                for j in range(7):
+                                    idx = i + j
+                                    if idx < 14:
+                                        with cols[j]:
+                                            date_obj = pd.to_datetime(daily["time"][idx])
+                                            day_name = date_obj.strftime("%a %d")
+                                            w_code = daily["weathercode"][idx]
+                                            _, e = WMO_CODES.get(w_code, ("Unknown", "❓"))
+                                            st.write(f"**{day_name}**")
+                                            st.write(f"{e}")
+                                            st.write(f"{daily['temperature_2m_max'][idx]}° / {daily['temperature_2m_min'][idx]}°")
                 else:
-                    st.warning("City not found. Please check the spelling.")
-        except httpx.HTTPStatusError as e:
-            st.error(f"API Error: {e.response.status_code}")
+                    st.warning("Location not found.")
         except Exception as e:
-            st.error(f"An unexpected error occurred: {e}")
+            st.error(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
