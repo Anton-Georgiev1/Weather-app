@@ -1,8 +1,6 @@
 import streamlit as st
 import httpx
 import pandas as pd
-from datetime import datetime, timedelta
-import streamlit.components.v1 as components
 
 # --- Configuration ---
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -40,8 +38,34 @@ WMO_CODES = {
     99: ("Thunderstorm with heavy hail", "⛈️"),
 }
 
+def safe_get(data_dict, key, idx, default=None):
+    """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
+    if not isinstance(data_dict, dict):
+        return default
+    arr = data_dict.get(key, [])
+    if isinstance(arr, list) and idx < len(arr) and arr[idx] is not None:
+        return arr[idx]
+    return default
+
+def get_ip_location():
+    """Fetches user's current city based on IP address."""
+    try:
+        resp = httpx.get("https://ipapi.co/json/", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data.get("city", ""), data.get("country_name", "")
+    except Exception:
+        pass
+    return "", ""
+
+def auto_locate():
+    """Callback for the Auto-Locate button."""
+    city, country = get_ip_location()
+    if city:
+        st.session_state.city_input = city
+        st.session_state.country_input = country
+
 def get_coordinates(city: str, country: str | None = None) -> dict | None:
-    """Fetch latitude and longitude for a city and country."""
     query = city.strip()
     if not query: return None
     if country and country.strip(): query += f", {country.strip()}"
@@ -51,179 +75,290 @@ def get_coordinates(city: str, country: str | None = None) -> dict | None:
         response.raise_for_status()
         data = response.json()
         return data["results"][0] if "results" in data and data["results"] else None
-    except Exception: return None
+    except Exception: 
+        return None
 
 def get_weather_data(lat: float, lon: float):
-    """Fetch 16-day and seasonal 30-day weather data."""
-    # Standard 16-day forecast
     f_params = {
         "latitude": lat,
         "longitude": lon,
         "current_weather": "true",
-        "daily": "temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,precipitation_sum",
+        "hourly": "temperature_2m,relative_humidity_2m,weathercode,precipitation_probability,wind_speed_10m",
+        "daily": "temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max,wind_speed_10m_max",
         "timezone": "auto",
         "forecast_days": 16
     }
-    # Seasonal 30-day (using seasonal-api for trend)
     s_params = {
         "latitude": lat,
         "longitude": lon,
         "daily": "temperature_2m_max,temperature_2m_min",
     }
     
+    f_data, s_data = None, None
     try:
         f_resp = httpx.get(WEATHER_API_URL, params=f_params, timeout=10)
         f_resp.raise_for_status()
         f_data = f_resp.json()
+    except Exception:
+        pass
         
-        # Try to get seasonal data for the "month" view
+    try:
         s_resp = httpx.get(SEASONAL_API_URL, params=s_params, timeout=10)
-        s_data = s_resp.json() if s_resp.status_code == 200 else None
+        if s_resp.status_code == 200:
+            s_data = s_resp.json()
+    except Exception: 
+        pass
         
-        return f_data, s_data
-    except Exception: return None, None
+    return f_data, s_data
 
-def render_weather_card(date_str, max_t, min_t, code, rain_prob, rain_sum=None):
-    date_obj = pd.to_datetime(date_str)
-    day_name = date_obj.strftime("%a")
-    day_num = date_obj.strftime("%d")
+def render_forecast_card(date_str, max_t, min_t, code, rain_prob, wind=None, humidity=None, is_hourly=False):
+    try:
+        date_obj = pd.to_datetime(date_str)
+        if is_hourly:
+            label = date_obj.strftime("%H:00")
+        else:
+            label = date_obj.strftime("%a %d")
+    except Exception:
+        label = "Unknown"
+    
+    code = code if code is not None else -1
     _, emoji = WMO_CODES.get(code, ("Unknown", "❓"))
     
-    # Rain Intuition: Highlight if rain chance > 30%
-    border_style = "border: 2px solid #00B4D8;" if rain_prob > 30 else "border: 1px solid #ddd;"
-    bg_color = "background-color: #E0F2F1;" if rain_prob > 30 else "background-color: transparent;"
+    try:
+        rain_prob_val = int(rain_prob)
+    except (ValueError, TypeError):
+        rain_prob_val = 0
+        
+    rain_color = "#00B4D8" if rain_prob_val > 20 else "inherit"
+    bg_style = "background-color: rgba(0, 180, 216, 0.1);" if rain_prob_val > 30 else ""
     
-    st.markdown(f"""
-    <div style="text-align: center; padding: 10px; border-radius: 10px; {border_style} {bg_color} min-width: 80px;">
-        <div style="font-weight: bold; font-size: 0.9em;">{day_name} {day_num}</div>
-        <div style="font-size: 2em; margin: 5px 0;">{emoji}</div>
-        <div style="font-weight: bold;">{max_t}°</div>
-        <div style="color: #666; font-size: 0.9em;">{min_t}°</div>
-        <div style="color: #0077B6; font-size: 0.8em; margin-top: 5px;">💧{rain_prob}%</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Formatting values
+    wind_str = f"{round(wind, 1)} km/h" if wind is not None else "-- km/h"
+    humidity_str = f"{int(humidity)}%" if humidity is not None else "--%"
+    max_t_str = f"{round(max_t, 1)}°" if max_t is not None else "--°"
+    min_t_str = f"{round(min_t, 1)}°" if min_t is not None else "--°"
+    
+    # Build text blocks without indents to prevent Streamlit from wrapping in code blocks
+    if is_hourly:
+        temp_html = f"<div style='font-size: 1.1em; font-weight: 700; margin-bottom: 8px;'>Temp: {max_t_str}</div>"
+    else:
+        temp_html = (
+            f"<div style='font-size: 1.1em; font-weight: 700;'>Max: {max_t_str}</div>"
+            f"<div style='font-size: 0.9em; opacity: 0.7; margin-bottom: 8px;'>Min: {min_t_str}</div>"
+        )
+
+    rain_html = f"<div style='font-size: 0.9em; color: {rain_color}; font-weight: 600; margin-top: 5px;'>Rain chance: {rain_prob_val}%</div>"
+    
+    extra_info = (
+        f"<div style='font-size: 0.85em; opacity: 0.7;'>Hum: {humidity_str}</div>"
+        f"<div style='font-size: 0.85em; opacity: 0.7;'>Wind: {wind_str}</div>"
+    )
+
+    # Increased padding (16px), font sizes, and min-width (140px)
+    html_content = (
+        f"<div style='text-align: center; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color, rgba(128,128,128,0.2)); {bg_style} min-width: 140px; margin: 5px; box-shadow: 2px 2px 8px rgba(0,0,0,0.1);'>"
+        f"<div style='font-weight: 600; font-size: 1em; margin-bottom: 5px; color: inherit;'>{label}</div>"
+        f"<div style='font-size: 2.5em; margin-bottom: 8px;'>{emoji}</div>"
+        f"{temp_html}"
+        f"{extra_info}"
+        f"{rain_html}"
+        f"</div>"
+    )
+    
+    st.markdown(html_content, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(page_title="Advanced Weather", page_icon="🌤️", layout="wide")
+    st.set_page_config(page_title="Weather Pro", page_icon="🌤️", layout="wide")
     
-    # Custom CSS for AccuWeather-like look
+    # Custom CSS: Make metrics large and hide Streamlit's settings menu (so users can't reset theme to System)
     st.markdown("""
     <style>
-    .main { background-color: inherit; }
-    .stMetric { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
-    [data-testid="stMetricValue"] { font-size: 2.5rem !important; }
+    [data-testid="stMetricValue"] { font-size: 2.5rem !important; font-weight: 700; }
+    #MainMenu {visibility: hidden;} /* Hides standard Streamlit menu */
+    header {visibility: hidden;}    /* Hides top right header menu */
     </style>
     """, unsafe_allow_html=True)
 
-    st.title("Weather Dashboard 🌤️")
+    st.title("Weather Pro Dashboard 🌤️")
     
-    col_input1, col_input2 = st.columns([1, 1])
-    with col_input1:
-        city = st.text_input("City", placeholder="e.g. Sofia")
-    with col_input2:
-        country = st.text_input("Country (Optional)", placeholder="e.g. Bulgaria")
+    # Setup session state for auto-locate
+    if "city_input" not in st.session_state:
+        st.session_state.city_input = ""
+    if "country_input" not in st.session_state:
+        st.session_state.country_input = ""
+    
+    # Input Layout 
+    c_in1, c_in2, c_btn = st.columns([3, 3, 2])
+    with c_in1:
+        st.text_input("City", key="city_input", placeholder="Enter city name...")
+    with c_in2:
+        st.text_input("Country (Optional)", key="country_input", placeholder="Enter country name...")
+    with c_btn:
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        st.button("📍 Auto-Locate Me", on_click=auto_locate, help="Detects your current city using your IP address.")
+
+    city = st.session_state.city_input
+    country = st.session_state.country_input
 
     if city:
-        location = get_coordinates(city, country)
-        if location:
-            lat, lon = location["latitude"], location["longitude"]
-            f_data, s_data = get_weather_data(lat, lon)
+        with st.spinner("Fetching weather data..."):
+            location = get_coordinates(city, country)
             
-            if f_data:
-                # --- HERO SECTION ---
-                curr = f_data["current_weather"]
-                wmo, emoji = WMO_CODES.get(curr["weathercode"], ("Unknown", "❓"))
+            if location:
+                lat, lon = location["latitude"], location["longitude"]
+                f_data, s_data = get_weather_data(lat, lon)
                 
-                st.header(f"{location['name']}, {location.get('country', '')}")
-                
-                c1, c2, r_col = st.columns([1, 1, 2])
-                with c1:
-                    st.metric("Current", f"{curr['temperature']}°C", help="Temperature right now")
-                    st.markdown(f"### {emoji} {wmo}")
-                with c2:
-                    st.metric("Wind", f"{curr['windspeed']} km/h")
-                    # Real feel estimation or extra data can go here
-                
-                with r_col:
-                    st.subheader("Interactive Radar")
-                    # Radar synced to location
-                    radar_url = f"https://www.rainviewer.com/map.html?lat={lat}&lon={lon}&zoom=6&type=1&size=512&color=1&tm=1&v=1"
-                    components.iframe(radar_url, height=300)
-
-                # --- FORECASTS ---
-                st.divider()
-                
-                # Tabbed Forecasts
-                tab7, tab14, tab30 = st.tabs(["7-Day Forecast", "14-Day Forecast", "30-Day Outlook"])
-                
-                daily = f_data["daily"]
-                
-                with tab7:
-                    st.subheader("Coming Week")
-                    cols = st.columns(7)
-                    for i in range(7):
-                        with cols[i]:
-                            render_weather_card(
-                                daily["time"][i], 
-                                daily["temperature_2m_max"][i], 
-                                daily["temperature_2m_min"][i], 
-                                daily["weathercode"][i], 
-                                daily["precipitation_probability_max"][i]
-                            )
+                if f_data:
+                    # --- Compute Daily Average Humidity from Hourly Data ---
+                    hourly = f_data.get("hourly", {})
+                    daily = f_data.get("daily", {})
                     
-                    # Rain probability chart for intuition
-                    st.markdown("#### Rain Probability Next 7 Days")
-                    df_7 = pd.DataFrame({
-                        "Date": pd.to_datetime(daily["time"][:7]),
-                        "Rain Chance (%)": daily["precipitation_probability_max"][:7]
-                    }).set_index("Date")
-                    st.bar_chart(df_7, color="#00B4D8")
-
-                with tab14:
-                    st.subheader("Next 2 Weeks")
-                    # Grid layout for 14 days
-                    for row in range(2):
-                        cols = st.columns(7)
-                        for col in range(7):
-                            idx = row * 7 + col
-                            if idx < 14:
-                                with cols[col]:
-                                    render_weather_card(
-                                        daily["time"][idx], 
-                                        daily["temperature_2m_max"][idx], 
-                                        daily["temperature_2m_min"][idx], 
-                                        daily["weathercode"][idx], 
-                                        daily["precipitation_probability_max"][idx]
-                                    )
+                    daily_hum_list = []
+                    hourly_hum_data = hourly.get("relative_humidity_2m", [])
+                    if hourly_hum_data:
+                        # Group 384 hours into 24-hour chunks (16 days total)
+                        for i in range(0, len(hourly_hum_data), 24):
+                            chunk = [x for x in hourly_hum_data[i:i+24] if x is not None]
+                            if chunk:
+                                daily_hum_list.append(sum(chunk) / len(chunk))
+                            else:
+                                daily_hum_list.append(None)
+                                
+                    # --- Current & Radar Section ---
+                    st.header(f"{location['name']}, {location.get('country', '')}")
+                    hero_col, radar_col = st.columns([1, 2])
                     
-                with tab30:
-                    st.subheader("30-Day Seasonal Trend")
-                    if s_data and "daily" in s_data:
-                        s_daily = s_data["daily"]
-                        df_30 = pd.DataFrame({
-                            "Date": pd.to_datetime(s_daily["time"][:30]),
-                            "Max Temp Trend (°C)": s_daily["temperature_2m_max"][:30],
-                            "Min Temp Trend (°C)": s_daily["temperature_2m_min"][:30]
-                        }).set_index("Date")
+                    with hero_col:
+                        curr = f_data.get("current_weather", {})
+                        wmo_code = curr.get("weathercode", -1)
+                        wmo, emoji = WMO_CODES.get(wmo_code, ("Unknown", "❓"))
                         
-                        st.line_chart(df_30)
-                        st.caption("Note: 30-day data is based on seasonal ensemble models (trends).")
+                        st.metric("Current Temperature", f"{curr.get('temperature', 'N/A')}°C")
+                        st.markdown(f"## {emoji} {wmo}")
+                        st.metric("Wind Speed", f"{curr.get('windspeed', 'N/A')} km/h")
                         
-                        # Show as table for detailed check
-                        with st.expander("See full 30-day table"):
-                            st.dataframe(df_30, use_container_width=True)
+                        humidity_val = safe_get(hourly, "relative_humidity_2m", 0)
+                        if humidity_val is not None:
+                            st.metric("Humidity", f"{humidity_val}%")
+                    
+                    with radar_col:
+                        st.subheader("Interactive Radar (Windy)")
+                        # Radar natively auto-locates via coordinates (lat/lon passed in URL)
+                        st.markdown(f"""
+                            <iframe width="100%" height="500" src="https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" frameborder="0"></iframe>
+                        """, unsafe_allow_html=True)
+                        st.caption(f"Radar successfully auto-centered on {location['name']}.")
+
+                    st.divider()
+
+                    # --- 24h Hourly Track ---
+                    if hourly and "time" in hourly:
+                        st.subheader("Next 24 Hours")
+                        num_hours = min(24, len(hourly["time"]))
+                        for i in range(0, num_hours, 6):  # Changed to 6 per row due to larger sizes
+                            cols = st.columns(6)
+                            for j in range(6):
+                                idx = i + j
+                                if idx < num_hours:
+                                    with cols[j]:
+                                        render_forecast_card(
+                                            hourly["time"][idx],
+                                            max_t=safe_get(hourly, "temperature_2m", idx),
+                                            min_t=None,
+                                            code=safe_get(hourly, "weathercode", idx),
+                                            rain_prob=safe_get(hourly, "precipitation_probability", idx),
+                                            wind=safe_get(hourly, "wind_speed_10m", idx),
+                                            humidity=safe_get(hourly, "relative_humidity_2m", idx),
+                                            is_hourly=True
+                                        )
                     else:
-                        # Fallback: Repeat 14-day data or show info
-                        st.info("High-resolution 30-day forecast is unavailable. Showing trend for next 16 days.")
-                        df_16 = pd.DataFrame({
-                            "Date": pd.to_datetime(daily["time"]),
-                            "Max Temp": daily["temperature_2m_max"],
-                            "Min Temp": daily["temperature_2m_min"]
-                        }).set_index("Date")
-                        st.line_chart(df_16)
+                        st.warning("Hourly data unavailable.")
 
-        else:
-            st.warning("Location not found. Try adding the country name.")
+                    st.divider()
+
+                    # --- Long Term Forecasts ---
+                    if daily and "time" in daily:
+                        tab7, tab14, tab30 = st.tabs(["7-Day Forecast", "14-Day Forecast", "30-Day Trend"])
+                        
+                        with tab7:
+                            num_7 = min(7, len(daily["time"]))
+                            cols = st.columns(7)
+                            for i in range(num_7):
+                                hum_val = daily_hum_list[i] if i < len(daily_hum_list) else None
+                                with cols[i]:
+                                    render_forecast_card(
+                                        daily["time"][i],
+                                        max_t=safe_get(daily, "temperature_2m_max", i),
+                                        min_t=safe_get(daily, "temperature_2m_min", i),
+                                        code=safe_get(daily, "weathercode", i),
+                                        rain_prob=safe_get(daily, "precipitation_probability_max", i),
+                                        wind=safe_get(daily, "wind_speed_10m_max", i),
+                                        humidity=hum_val
+                                    )
+                        
+                        with tab14:
+                            num_14 = min(14, len(daily["time"]))
+                            for row in range((num_14 + 6) // 7):
+                                cols = st.columns(7)
+                                for col in range(7):
+                                    idx = row * 7 + col
+                                    if idx < num_14:
+                                        hum_val = daily_hum_list[idx] if idx < len(daily_hum_list) else None
+                                        with cols[col]:
+                                            render_forecast_card(
+                                                daily["time"][idx],
+                                                max_t=safe_get(daily, "temperature_2m_max", idx),
+                                                min_t=safe_get(daily, "temperature_2m_min", idx),
+                                                code=safe_get(daily, "weathercode", idx),
+                                                rain_prob=safe_get(daily, "precipitation_probability_max", idx),
+                                                wind=safe_get(daily, "wind_speed_10m_max", idx),
+                                                humidity=hum_val
+                                            )
+
+                        with tab30:
+                            s_daily = s_data.get("daily", {}) if s_data else {}
+                            if s_daily and "time" in s_daily:
+                                num_30 = min(30, len(s_daily["time"]))
+                                for i in range(0, num_30, 7):
+                                    cols = st.columns(7)
+                                    for j in range(7):
+                                        idx = i + j
+                                        if idx < num_30:
+                                            with cols[j]:
+                                                # Seasonal API doesn't provide 30-day wind/humidity, safely rendered as "--"
+                                                render_forecast_card(
+                                                    s_daily["time"][idx],
+                                                    max_t=safe_get(s_daily, "temperature_2m_max", idx),
+                                                    min_t=safe_get(s_daily, "temperature_2m_min", idx),
+                                                    code=0, 
+                                                    rain_prob=0
+                                                )
+                            else:
+                                st.info("30-day seasonal data not available. Showing 16-day trend.")
+                                num_16 = len(daily["time"])
+                                for i in range(0, num_16, 7):
+                                    cols = st.columns(7) 
+                                    for j in range(7):
+                                        idx = i + j
+                                        if idx < num_16:
+                                            hum_val = daily_hum_list[idx] if idx < len(daily_hum_list) else None
+                                            with cols[j]:
+                                                render_forecast_card(
+                                                    daily["time"][idx],
+                                                    max_t=safe_get(daily, "temperature_2m_max", idx),
+                                                    min_t=safe_get(daily, "temperature_2m_min", idx),
+                                                    code=safe_get(daily, "weathercode", idx),
+                                                    rain_prob=safe_get(daily, "precipitation_probability_max", idx),
+                                                    wind=safe_get(daily, "wind_speed_10m_max", idx),
+                                                    humidity=hum_val
+                                                )
+                    else:
+                        st.warning("Daily forecast data unavailable.")
+
+                else:
+                    st.error("Failed to retrieve weather data. Try a different city.")
+            else:
+                st.warning("Location not found. Please verify the city and country name.")
 
 if __name__ == "__main__":
     main()
