@@ -82,6 +82,7 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
                          hour_t=None, hour_app=None, is_hourly=False):
     try:
         date_obj = pd.to_datetime(date_str)
+        # Full day names used for formatting
         label = date_obj.strftime("%H:00") if is_hourly else date_obj.strftime("%A, %d %b")
     except Exception:
         label = "Unknown"
@@ -145,7 +146,7 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
 def main():
     st.set_page_config(page_title="Weather Pro", page_icon="🌤️", layout="wide")
     
-    # Custom CSS for bigger metrics AND significantly wider/larger Tab Headers
+    # Custom CSS for bigger metrics, wider Tabs, and HIDING the Streamlit Header / Deploy Panel completely
     st.markdown("""
     <style>
     [data-testid="stMetricValue"] { font-size: 2.2rem !important; font-weight: 700; }
@@ -161,6 +162,12 @@ def main():
     .stTabs [data-baseweb="tab"] p {
         font-size: 1.4rem !important;
         font-weight: 700 !important;
+    }
+
+    /* COMPLETE PANEL HIDE: Hides the top deploy bar completely */
+    [data-testid="stHeader"] {
+        visibility: hidden;
+        display: none;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -302,7 +309,7 @@ def main():
                                 app_min=safe_get(daily, "apparent_temperature_min", data_index),
                                 is_hourly=False
                             )
-                            # UNIQUE KEY: combining the tab name and the date
+                            # UNIQUE KEY: combining the tab name and the date to prevent duplicate key crashes
                             btn_key = f"btn_{tab_prefix}_{daily['time'][data_index]}"
                             if st.button("🕐 24h View", key=btn_key, use_container_width=True):
                                 st.session_state.selected_date = daily["time"][data_index]
