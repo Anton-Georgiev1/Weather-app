@@ -82,13 +82,12 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
                          hour_t=None, hour_app=None, is_hourly=False):
     try:
         date_obj = pd.to_datetime(date_str)
-        # Using %A for Full day names (Monday, Tuesday, etc.)
         label = date_obj.strftime("%H:00") if is_hourly else date_obj.strftime("%A, %d %b")
     except Exception:
         label = "Unknown"
     
     code = code if code is not None else -1
-    _, emoji = WMO_CODES.get(code, ("Unknown", "❓"))
+    desc, emoji = WMO_CODES.get(code, ("Unknown", "❓"))
     
     try:
         rain_prob_val = int(rain_prob)
@@ -132,12 +131,14 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
     html_content = (
         f"<div style='text-align: center; padding: 20px; border-radius: 16px; border: 1px solid var(--border-color, rgba(128,128,128,0.2)); {bg_style} margin: 6px; box-shadow: 2px 4px 10px rgba(0,0,0,0.1);'>"
         f"<div style='font-weight: 700; font-size: 1.05em; margin-bottom: 5px; color: inherit;'>{label}</div>"
-        f"<div style='font-size: 3.2em; margin-bottom: 10px;'>{emoji}</div>"
+        f"<div style='font-size: 3.2em; margin-bottom: 0px;'>{emoji}</div>"
+        f"<div style='font-size: 1em; font-weight: 700; color: #007BFF; margin-bottom: 12px;'>{desc}</div>"
         f"{temp_html}"
         f"<div style='margin-top: 10px; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 8px;'>"
         f"{extra_info}"
         f"{rain_html}"
-        f"</div></div>"
+        f"</div>"
+        f"</div>"
     )
     st.markdown(html_content, unsafe_allow_html=True)
 
@@ -166,12 +167,23 @@ def main():
 
     st.title("Weather Pro Dashboard 🌤️")
 
+    # Initialize session states for specific day drill-down
+    if "selected_date" not in st.session_state:
+        st.session_state.selected_date = None
+    if "last_city" not in st.session_state:
+        st.session_state.last_city = ""
+
     # Input Layout 
     c_in1, c_in2 = st.columns([1, 1])
     with c_in1:
         city_input = st.text_input("City", placeholder="Enter city name...")
     with c_in2:
         country_input = st.text_input("Country (Optional)", placeholder="Enter country name...")
+
+    # Clear selected day when user searches for a new city
+    if city_input and city_input != st.session_state.last_city:
+        st.session_state.selected_date = None
+        st.session_state.last_city = city_input
 
     if city_input:
         with st.spinner("Fetching weather data..."):
@@ -273,6 +285,29 @@ def main():
 
                     st.divider()
 
+                    # --- Helper function to display card + button ---
+                    # We pass 'tab_prefix' so buttons in the 7-day tab and 14-day tab get completely unique keys!
+                    def display_daily_column(st_col, data_index, tab_prefix):
+                        hum_val = daily_hum_list[data_index] if data_index < len(daily_hum_list) else None
+                        with st_col:
+                            render_forecast_card(
+                                daily["time"][data_index],
+                                code=safe_get(daily, "weather_code", data_index),
+                                rain_prob=safe_get(daily, "precipitation_probability_max", data_index),
+                                wind=safe_get(daily, "wind_speed_10m_max", data_index),
+                                humidity=hum_val,
+                                max_t=safe_get(daily, "temperature_2m_max", data_index),
+                                min_t=safe_get(daily, "temperature_2m_min", data_index),
+                                app_max=safe_get(daily, "apparent_temperature_max", data_index),
+                                app_min=safe_get(daily, "apparent_temperature_min", data_index),
+                                is_hourly=False
+                            )
+                            # UNIQUE KEY: combining the tab name and the date
+                            btn_key = f"btn_{tab_prefix}_{daily['time'][data_index]}"
+                            if st.button("🕐 24h View", key=btn_key, use_container_width=True):
+                                st.session_state.selected_date = daily["time"][data_index]
+                                st.rerun()
+
                     # --- Long Term Forecasts & Radar Tabs ---
                     if daily and "time" in daily:
                         tab7, tab14, tab_radar = st.tabs(["7-Day Forecast", "14-Day Forecast", "Live Radar 📡"])
@@ -281,20 +316,7 @@ def main():
                             num_7 = min(7, len(daily["time"]))
                             cols = st.columns(7)
                             for i in range(num_7):
-                                hum_val = daily_hum_list[i] if i < len(daily_hum_list) else None
-                                with cols[i]:
-                                    render_forecast_card(
-                                        daily["time"][i],
-                                        code=safe_get(daily, "weather_code", i),
-                                        rain_prob=safe_get(daily, "precipitation_probability_max", i),
-                                        wind=safe_get(daily, "wind_speed_10m_max", i),
-                                        humidity=hum_val,
-                                        max_t=safe_get(daily, "temperature_2m_max", i),
-                                        min_t=safe_get(daily, "temperature_2m_min", i),
-                                        app_max=safe_get(daily, "apparent_temperature_max", i),
-                                        app_min=safe_get(daily, "apparent_temperature_min", i),
-                                        is_hourly=False
-                                    )
+                                display_daily_column(cols[i], i, "tab7")
                         
                         with tab14:
                             num_14 = min(14, len(daily["time"]))
@@ -303,27 +325,56 @@ def main():
                                 for col in range(7):
                                     idx = row * 7 + col
                                     if idx < num_14:
-                                        hum_val = daily_hum_list[idx] if idx < len(daily_hum_list) else None
-                                        with cols[col]:
-                                            render_forecast_card(
-                                                daily["time"][idx],
-                                                code=safe_get(daily, "weather_code", idx),
-                                                rain_prob=safe_get(daily, "precipitation_probability_max", idx),
-                                                wind=safe_get(daily, "wind_speed_10m_max", idx),
-                                                humidity=hum_val,
-                                                max_t=safe_get(daily, "temperature_2m_max", idx),
-                                                min_t=safe_get(daily, "temperature_2m_min", idx),
-                                                app_max=safe_get(daily, "apparent_temperature_max", idx),
-                                                app_min=safe_get(daily, "apparent_temperature_min", idx),
-                                                is_hourly=False
-                                            )
+                                        display_daily_column(cols[col], idx, "tab14")
                                             
                         with tab_radar:
-                            st.markdown("<br>", unsafe_allow_html=True) # Adds a little spacing before the radar
+                            st.markdown("<br>", unsafe_allow_html=True)
                             st.markdown(f"""
                                 <iframe width="100%" height="600" src="https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" frameborder="0" style="border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);"></iframe>
                             """, unsafe_allow_html=True)
                             st.caption(f"Interactive Live Radar is actively centered on {location['name']}.")
+
+                        # --- Specific Day Clicked Section ---
+                        if st.session_state.selected_date:
+                            st.divider()
+                            sel_date = st.session_state.selected_date
+                            formatted_sel_date = pd.to_datetime(sel_date).strftime("%A, %B %d")
+                            
+                            st.subheader(f"🕒 Specific Hourly Forecast for {formatted_sel_date}")
+                            
+                            # Find all hour indices that match the clicked date
+                            day_indices = [idx for idx, time_str in enumerate(hourly.get("time", [])) if time_str.startswith(sel_date)]
+                            
+                            if day_indices:
+                                for i in range(0, len(day_indices), 6):
+                                    cols = st.columns(6)
+                                    for j in range(6):
+                                        if i + j < len(day_indices):
+                                            idx = day_indices[i + j]
+                                            
+                                            try:
+                                                d_idx = daily["time"].index(sel_date)
+                                                d_min = safe_get(daily, "temperature_2m_min", d_idx)
+                                                d_max = safe_get(daily, "temperature_2m_max", d_idx)
+                                            except ValueError:
+                                                d_min, d_max = None, None
+                                                
+                                            with cols[j]:
+                                                render_forecast_card(
+                                                    hourly["time"][idx],
+                                                    code=safe_get(hourly, "weather_code", idx),
+                                                    rain_prob=safe_get(hourly, "precipitation_probability", idx),
+                                                    wind=safe_get(hourly, "wind_speed_10m", idx),
+                                                    humidity=safe_get(hourly, "relative_humidity_2m", idx),
+                                                    max_t=d_max,
+                                                    min_t=d_min,
+                                                    hour_t=safe_get(hourly, "temperature_2m", idx),
+                                                    hour_app=safe_get(hourly, "apparent_temperature", idx),
+                                                    is_hourly=True
+                                                )
+                            else:
+                                st.info("Hourly breakdown data is not available this far in the future.")
+
                     else:
                         st.warning("Daily forecast data unavailable.")
                 else:
