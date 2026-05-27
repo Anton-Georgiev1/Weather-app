@@ -144,7 +144,7 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
     st.markdown(html_content, unsafe_allow_html=True)
 
 def main():
-    st.set_page_config(page_title="Weather Pro", page_icon="🌤️", layout="wide")
+    st.set_page_config(page_title="Weather App", page_icon="🌤️", layout="wide")
     
     # Custom CSS for bigger metrics, wider Tabs, and HIDING the Streamlit Header / Deploy Panel completely
     st.markdown("""
@@ -172,7 +172,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    st.title("Weather Pro Dashboard 🌤️")
+    st.title("Weather App Dashboard 🌤️")
 
     # Initialize session states for specific day drill-down
     if "selected_date" not in st.session_state:
