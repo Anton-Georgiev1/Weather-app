@@ -1,4 +1,4 @@
-# 🌤️ Weather Pro Dashboard
+# Weather App Dashboard
 
 A high-performance, professional-grade weather application built with **Python**, **Streamlit**, and the **Open-Meteo API**. This dashboard provides a sleek, "AccuWeather-inspired" experience, featuring real-time data, high-resolution hourly tracks, and interactive global radar—all without requiring an API key.
 
