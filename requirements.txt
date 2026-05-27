@@ -1,0 +1,5 @@
+streamlit
+httpx
+pandas
+pytest
+pytest-httpx
