@@ -77,12 +77,48 @@ def get_weather_data(lat: float, lon: float):
     except Exception:
         return None
 
-def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None, 
-                         max_t=None, min_t=None, app_max=None, app_min=None, 
-                         hour_t=None, hour_app=None, is_hourly=False):
+def calculate_daily_average_humidity(hourly_hum_data: list[float | None]) -> list[float | None]:
+    """Calculate daily average humidity from hourly data (24-hour chunks)."""
+    daily_hum_list = []
+    if not hourly_hum_data:
+        return []
+    for i in range(0, len(hourly_hum_data), 24):
+        chunk = [x for x in hourly_hum_data[i:i+24] if x is not None]
+        daily_hum_list.append(sum(chunk) / len(chunk) if chunk else None)
+    return daily_hum_list
+
+def get_weather_alerts(daily_data: dict) -> list[dict]:
+    """Analyze daily data for severe weather or wind alerts."""
+    alerts = []
+    if not daily_data or "time" not in daily_data:
+        return alerts
+    
+    for i in range(len(daily_data["time"])):
+        wcode = safe_get(daily_data, "weather_code", i)
+        prob = safe_get(daily_data, "precipitation_probability_max", i, 0)
+        wind = safe_get(daily_data, "wind_speed_10m_max", i, 0)
+        day_name = pd.to_datetime(daily_data["time"][i]).strftime("%A, %B %d")
+        
+        if wcode in [65, 67, 75, 82, 86, 95, 96, 99]:
+            condition_name = WMO_CODES.get(wcode, ("Severe Weather", ""))[0]
+            alerts.append({
+                "type": "error",
+                "message": f"**Alert for {day_name}:** {condition_name} expected! (**{prob}%** chance of precipitation)"
+            })
+        
+        if wind is not None and wind > 50:
+            alerts.append({
+                "type": "warning",
+                "message": f"**Wind Advisory for {day_name}:** High wind speeds expected up to **{wind} km/h**."
+            })
+    return alerts
+
+def generate_forecast_card_html(date_str, code, rain_prob, wind=None, humidity=None, 
+                               max_t=None, min_t=None, app_max=None, app_min=None, 
+                               hour_t=None, hour_app=None, is_hourly=False) -> str:
+    """Generate the HTML for a forecast card."""
     try:
         date_obj = pd.to_datetime(date_str)
-        # Full day names used for formatting
         label = date_obj.strftime("%H:00") if is_hourly else date_obj.strftime("%A, %d %b")
     except Exception:
         label = "Unknown"
@@ -90,7 +126,6 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
     code = code if code is not None else -1
     desc, emoji = WMO_CODES.get(code, ("Unknown", "❓"))
     
-    # Map descriptions to specific CSS classes instead of inline colors
     desc_class = ""
     if desc == "Thunderstorm with hail":
         desc_class = "desc-hail"
@@ -110,7 +145,6 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
     max_t_str = f"{round(max_t, 1)}°" if max_t is not None else "--°"
     min_t_str = f"{round(min_t, 1)}°" if min_t is not None else "--°"
     
-    # Template structure matching CSS classes (using () string concatenation to prevent markdown code block bugs)
     if is_hourly:
         hour_t_str = f"{round(hour_t, 1)}°" if hour_t is not None else "--°"
         hour_app_str = f"{round(hour_app, 1)}°" if hour_app is not None else "--°"
@@ -130,8 +164,7 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
             f"<div class='temp-secondary mb-small'>Feels like {app_min_str}</div>"
         )
 
-    # Final HTML string relying completely on classes for styling
-    html_content = (
+    return (
         f"<div class='forecast-card {card_bg_class}'>"
         f"<div class='forecast-time'>{label}</div>"
         f"<div class='forecast-emoji'>{emoji}</div>"
@@ -144,7 +177,9 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
         f"</div>"
         f"</div>"
     )
-    
+
+def render_forecast_card(*args, **kwargs):
+    html_content = generate_forecast_card_html(*args, **kwargs)
     st.markdown(html_content, unsafe_allow_html=True)
 
 def main():
@@ -271,12 +306,7 @@ def main():
                     curr = f_data.get("current", {})
                     
                     # Compute Daily Average Humidity
-                    daily_hum_list = []
-                    hourly_hum_data = hourly.get("relative_humidity_2m", [])
-                    if hourly_hum_data:
-                        for i in range(0, len(hourly_hum_data), 24):
-                            chunk = [x for x in hourly_hum_data[i:i+24] if x is not None]
-                            daily_hum_list.append(sum(chunk) / len(chunk) if chunk else None)
+                    daily_hum_list = calculate_daily_average_humidity(hourly.get("relative_humidity_2m", []))
 
                     # --- Main Screen Metrics ---
                     st.header(f"📍 {location['name']}, {location.get('country', '')}")
@@ -299,25 +329,16 @@ def main():
 
                     # --- Alerts Section ---
                     if daily and "time" in daily:
-                        has_alerts = False
                         st.subheader(f"⚠️ Weather Alerts for {location['name']}")
+                        alerts = get_weather_alerts(daily)
                         
-                        for i in range(len(daily["time"])):
-                            wcode = safe_get(daily, "weather_code", i)
-                            prob = safe_get(daily, "precipitation_probability_max", i, 0)
-                            wind = safe_get(daily, "wind_speed_10m_max", i, 0)
-                            day_name = pd.to_datetime(daily["time"][i]).strftime("%A, %B %d")
-                            
-                            if wcode in [65, 67, 75, 82, 86, 95, 96, 99]:
-                                condition_name = WMO_CODES.get(wcode, ("Severe Weather", ""))[0]
-                                st.error(f"**Alert for {day_name}:** {condition_name} expected! (**{prob}%** chance of precipitation)")
-                                has_alerts = True
-                            
-                            if wind is not None and wind > 50:
-                                st.warning(f"**Wind Advisory for {day_name}:** High wind speeds expected up to **{wind} km/h**.")
-                                has_alerts = True
-                                
-                        if not has_alerts:
+                        if alerts:
+                            for alert in alerts:
+                                if alert["type"] == "error":
+                                    st.error(alert["message"])
+                                else:
+                                    st.warning(alert["message"])
+                        else:
                             st.success(f"No severe storms or high wind alerts detected for {location['name']} over the next 14 days.")
                     
                     st.divider()
