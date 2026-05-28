@@ -381,7 +381,7 @@ def main():
 
                     # --- Long Term Forecasts & Radar Tabs ---
                     if daily and "time" in daily:
-                        tab7, tab14, tab_radar = st.tabs(["7-Day Forecast", "14-Day Forecast", "Live Radar 📡"])
+                        tab7, tab14, tab_radar = st.tabs(["7-Day Forecast", "14-Day Forecast", "Live Radar Nowcast 📡"])
                         
                         with tab7:
                             num_7 = min(7, len(daily["time"]))
@@ -400,11 +400,13 @@ def main():
                                             
                         with tab_radar:
                             st.markdown("<br>", unsafe_allow_html=True)
+                            
+                            # Restored the WORKING Windy embed (which correctly displays the red Next 1h UI)
+                            # The caption text has been entirely removed as requested.
                             st.markdown(
-                                f"<iframe width='100%' height='600' src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1' frameborder='0' style='border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);'></iframe>", 
+                                f"<iframe width='100%' height='600' src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0' style='border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);'></iframe>", 
                                 unsafe_allow_html=True
                             )
-                            st.caption(f"Interactive Live Radar is actively centered on {location['name']}.")
 
                         # --- Specific Day Clicked Section ---
                         if st.session_state.selected_date:
