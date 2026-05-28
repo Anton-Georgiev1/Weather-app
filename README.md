@@ -1,4 +1,4 @@
-# 🌤️ Weather App Dashboard
+# Weather App Dashboard
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -29,7 +29,7 @@ Weather data is often cold and overwhelming. This dashboard is designed to be **
 ## Technical Excellence
 
 ### Architecture & Design
-This project isn't just about looks—it's built on a foundation of clean code and architectural integrity:
+This project isn't just about looks-it's built on a foundation of clean code and architectural integrity:
 - **SRP (Single Responsibility Principle):** Logic is decoupled into dedicated, testable functions for alerts, data processing, and UI generation.
 - **Defensive Engineering:** Robust error handling ensures the app remains stable even when external APIs face issues or return partial data.
 - **Modern Tech Stack:**
@@ -38,7 +38,7 @@ This project isn't just about looks—it's built on a foundation of clean code a
   - **Processing:** `pandas` for time-series data manipulation.
 
 ### Reliability
-We take stability seriously. Every core business logic—from alert detection to humidity averages—is verified by a **18-test suite**.
+We take stability seriously. Every core business logic-from alert detection to humidity averages-is verified by a **18-test suite**.
 
 ```bash
 # Run the test suite
