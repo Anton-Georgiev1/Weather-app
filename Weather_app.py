@@ -90,84 +90,149 @@ def render_forecast_card(date_str, code, rain_prob, wind=None, humidity=None,
     code = code if code is not None else -1
     desc, emoji = WMO_CODES.get(code, ("Unknown", "❓"))
     
+    # Map descriptions to specific CSS classes instead of inline colors
+    desc_class = ""
+    if desc == "Thunderstorm with hail":
+        desc_class = "desc-hail"
+    elif "Thunderstorm" in desc: 
+        desc_class = "desc-thunderstorm"
+
     try:
         rain_prob_val = int(rain_prob)
     except (ValueError, TypeError):
         rain_prob_val = 0
         
-    rain_color = "#00B4D8" if rain_prob_val > 20 else "inherit"
-    bg_style = "background-color: rgba(0, 180, 216, 0.1);" if rain_prob_val > 30 else ""
+    card_bg_class = "rain-bg" if rain_prob_val > 30 else ""
+    rain_text_class = "high-prob" if rain_prob_val > 20 else ""
     
     wind_str = f"{round(wind, 1)} km/h" if wind is not None else "-- km/h"
     humidity_str = f"{int(humidity)}%" if humidity is not None else "--%"
     max_t_str = f"{round(max_t, 1)}°" if max_t is not None else "--°"
     min_t_str = f"{round(min_t, 1)}°" if min_t is not None else "--°"
     
+    # Template structure matching CSS classes (using () string concatenation to prevent markdown code block bugs)
     if is_hourly:
         hour_t_str = f"{round(hour_t, 1)}°" if hour_t is not None else "--°"
         hour_app_str = f"{round(hour_app, 1)}°" if hour_app is not None else "--°"
         temp_html = (
-            f"<div style='font-size: 1.15em; font-weight: 700;'>Current Temp: {hour_t_str}</div>"
-            f"<div style='font-size: 0.9em; opacity: 0.7; margin-bottom: 8px;'>Feels like {hour_app_str}</div>"
-            f"<div style='font-size: 0.9em; font-weight: 600; opacity: 0.9;'>Day Max: {max_t_str}</div>"
-            f"<div style='font-size: 0.9em; font-weight: 600; opacity: 0.9; margin-bottom: 8px;'>Day Min: {min_t_str}</div>"
+            f"<div class='temp-primary'>Current Temp: {hour_t_str}</div>"
+            f"<div class='temp-secondary mb-small'>Feels like {hour_app_str}</div>"
+            f"<div class='temp-tertiary'>Day Max: {max_t_str}</div>"
+            f"<div class='temp-tertiary mb-small'>Day Min: {min_t_str}</div>"
         )
     else:
         app_max_str = f"{round(app_max, 1)}°" if app_max is not None else "--°"
         app_min_str = f"{round(app_min, 1)}°" if app_min is not None else "--°"
         temp_html = (
-            f"<div style='font-size: 1.1em; font-weight: 700;'>Max: {max_t_str}</div>"
-            f"<div style='font-size: 0.85em; opacity: 0.7;'>Feels like {app_max_str}</div>"
-            f"<div style='font-size: 1.1em; font-weight: 600; margin-top: 8px;'>Min: {min_t_str}</div>"
-            f"<div style='font-size: 0.85em; opacity: 0.7; margin-bottom: 8px;'>Feels like {app_min_str}</div>"
+            f"<div class='temp-primary'>Max: {max_t_str}</div>"
+            f"<div class='temp-secondary'>Feels like {app_max_str}</div>"
+            f"<div class='temp-primary mt-small'>Min: {min_t_str}</div>"
+            f"<div class='temp-secondary mb-small'>Feels like {app_min_str}</div>"
         )
 
-    rain_html = f"<div style='font-size: 0.95em; color: {rain_color}; font-weight: 600; margin-top: 8px;'>Rain chance: {rain_prob_val}%</div>"
-    
-    extra_info = (
-        f"<div style='font-size: 0.85em; opacity: 0.7;'>Hum: {humidity_str}</div>"
-        f"<div style='font-size: 0.85em; opacity: 0.7;'>Wind: {wind_str}</div>"
-    )
-
+    # Final HTML string relying completely on classes for styling
     html_content = (
-        f"<div style='text-align: center; padding: 20px; border-radius: 16px; border: 1px solid var(--border-color, rgba(128,128,128,0.2)); {bg_style} margin: 6px; box-shadow: 2px 4px 10px rgba(0,0,0,0.1);'>"
-        f"<div style='font-weight: 700; font-size: 1.05em; margin-bottom: 5px; color: inherit;'>{label}</div>"
-        f"<div style='font-size: 3.2em; margin-bottom: 0px;'>{emoji}</div>"
-        f"<div style='font-size: 1em; font-weight: 700; color: #007BFF; margin-bottom: 12px;'>{desc}</div>"
+        f"<div class='forecast-card {card_bg_class}'>"
+        f"<div class='forecast-time'>{label}</div>"
+        f"<div class='forecast-emoji'>{emoji}</div>"
+        f"<div class='forecast-desc {desc_class}'>{desc}</div>"
         f"{temp_html}"
-        f"<div style='margin-top: 10px; border-top: 1px solid rgba(128,128,128,0.2); padding-top: 8px;'>"
-        f"{extra_info}"
-        f"{rain_html}"
+        f"<div class='forecast-divider'>"
+        f"<div class='forecast-extra'>Hum: {humidity_str}</div>"
+        f"<div class='forecast-extra'>Wind: {wind_str}</div>"
+        f"<div class='forecast-rain {rain_text_class}'>Rain chance: {rain_prob_val}%</div>"
         f"</div>"
         f"</div>"
     )
+    
     st.markdown(html_content, unsafe_allow_html=True)
 
 def main():
     st.set_page_config(page_title="Weather App", page_icon="🌤️", layout="wide")
     
-    # Custom CSS for bigger metrics, wider Tabs, and HIDING the Streamlit Header / Deploy Panel completely
+    # All App CSS (including new classes for our forecast cards)
     st.markdown("""
     <style>
     [data-testid="stMetricValue"] { font-size: 2.2rem !important; font-weight: 700; }
     
     /* Make Streamlit Tabs larger and wider */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 20px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        padding: 10px 24px;
-        height: auto;
-    }
-    .stTabs [data-baseweb="tab"] p {
-        font-size: 1.4rem !important;
-        font-weight: 700 !important;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 20px; }
+    .stTabs [data-baseweb="tab"] { padding: 10px 24px; height: auto; }
+    .stTabs [data-baseweb="tab"] p { font-size: 1.4rem !important; font-weight: 700 !important; }
 
     /* COMPLETE PANEL HIDE: Hides the top deploy bar completely */
-    [data-testid="stHeader"] {
-        visibility: hidden;
-        display: none;
+    [data-testid="stHeader"] { visibility: hidden; display: none; }
+    
+    /* --- CUSTOM FORECAST CARD CSS CLASSES --- */
+    .forecast-card {
+        text-align: center;
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid var(--border-color, rgba(128,128,128,0.2));
+        margin: 6px;
+        box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+    }
+    .forecast-card.rain-bg {
+        background-color: rgba(0, 180, 216, 0.1);
+    }
+    .forecast-time {
+        font-weight: 700;
+        font-size: 1.05em;
+        margin-bottom: 5px;
+        color: inherit;
+    }
+    .forecast-emoji {
+        font-size: 3.2em;
+        line-height: 1.2;
+        margin-bottom: 0px;
+    }
+    .forecast-desc {
+        font-size: 1em;
+        font-weight: 700;
+        color: #007BFF; /* Default Blue for standard weather */
+        margin-bottom: 12px;
+    }
+    
+    /* Dynamic Weather Text Colors */
+    .forecast-desc.desc-thunderstorm {
+        color: orange;
+    }
+    .forecast-desc.desc-hail {
+        color: red;
+    }
+    
+    .temp-primary {
+        font-size: 1.1em;
+        font-weight: 700;
+    }
+    .temp-secondary {
+        font-size: 0.85em;
+        opacity: 0.7;
+    }
+    .temp-tertiary {
+        font-size: 0.9em;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+    .mt-small { margin-top: 8px; }
+    .mb-small { margin-bottom: 8px; }
+    
+    .forecast-divider {
+        margin-top: 10px;
+        border-top: 1px solid rgba(128,128,128,0.2);
+        padding-top: 8px;
+    }
+    .forecast-extra {
+        font-size: 0.85em;
+        opacity: 0.7;
+    }
+    .forecast-rain {
+        font-size: 0.95em;
+        font-weight: 600;
+        margin-top: 8px;
+    }
+    .forecast-rain.high-prob {
+        color: #00B4D8;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -293,7 +358,6 @@ def main():
                     st.divider()
 
                     # --- Helper function to display card + button ---
-                    # We pass 'tab_prefix' so buttons in the 7-day tab and 14-day tab get completely unique keys!
                     def display_daily_column(st_col, data_index, tab_prefix):
                         hum_val = daily_hum_list[data_index] if data_index < len(daily_hum_list) else None
                         with st_col:
@@ -336,9 +400,10 @@ def main():
                                             
                         with tab_radar:
                             st.markdown("<br>", unsafe_allow_html=True)
-                            st.markdown(f"""
-                                <iframe width="100%" height="600" src="https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" frameborder="0" style="border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);"></iframe>
-                            """, unsafe_allow_html=True)
+                            st.markdown(
+                                f"<iframe width='100%' height='600' src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1' frameborder='0' style='border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);'></iframe>", 
+                                unsafe_allow_html=True
+                            )
                             st.caption(f"Interactive Live Radar is actively centered on {location['name']}.")
 
                         # --- Specific Day Clicked Section ---
