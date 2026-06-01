@@ -188,7 +188,11 @@ TRANSLATIONS = {
         "daily_unavailable": "Daily forecast data unavailable.",
         "fetch_failed": "Failed to retrieve weather data. Try a different city.",
         "loc_not_found": "Location not found. Please verify the city and country name.",
-        "lang_label": "Language / Език",
+        
+        # New Translations Added!
+        "lang_label": "Language",
+        "open_windy": "🌍 Open Full Radar on Windy.com",
+        
         # Card strings
         "card_current_temp": "Current Temp",
         "card_feels_like": "Feels like",
@@ -231,7 +235,11 @@ TRANSLATIONS = {
         "daily_unavailable": "Данните за ежедневната прогноза са недостъпни.",
         "fetch_failed": "Неуспешно извличане на данни за времето. Опитайте с друг град.",
         "loc_not_found": "Местоположението не е намерено. Моля, проверете името на града и държавата.",
-        "lang_label": "Език / Language",
+        
+        # New Translations Added!
+        "lang_label": "Език",
+        "open_windy": "🌍 Отвори пълния радар на Windy.com",
+        
         # Card strings
         "card_current_temp": "Текуща темп.",
         "card_feels_like": "Усеща се като",
@@ -525,20 +533,18 @@ def main():
     t = TRANSLATIONS[current_lang]
     
     # --- Main Page Header Layout ---
-    # Creates two columns: Title takes 80% of width, Language Selector takes 20%
     header_col1, header_col2 = st.columns([4, 1])
     
     with header_col1:
         st.title(t["app_title"])
         
     with header_col2:
-        st.write("") # Small spacing to align nicely with the title
         lang_opts = {"English": "en", "Български": "bg"}
+        # The label t["lang_label"] is now clearly visible above the box!
         selected_lang_name = st.selectbox(
-            "Language / Език",
+            label=t["lang_label"],
             options=list(lang_opts.keys()),
             index=0 if current_lang == "en" else 1,
-            label_visibility="collapsed",
             key="main_language_selector"
         )
         lang = lang_opts[selected_lang_name]
@@ -562,7 +568,6 @@ def main():
     c_in1, c_in2 = st.columns([1, 1])
     
     with c_in1:
-        # Notice the 'value' parameter. It reads what we saved to memory!
         city_input = st.text_input(
             t["city_label"], 
             value=st.session_state.saved_city, 
@@ -718,6 +723,13 @@ def main():
                         with tab_radar:
                             st.markdown("<br>", unsafe_allow_html=True)
                             
+                            # --- BIG REDIRECT BUTTON TO WINDY.COM ---
+                            windy_redirect_url = f"https://www.windy.com/-Weather-radar-radar?radar,{lat},{lon},6"
+                            st.link_button(t["open_windy"], url=windy_redirect_url, type="primary")
+                            
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            
+                            # Keeps the embedded preview view visible just underneath
                             st.markdown(
                                 f"<iframe width='100%' height='600' src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0' style='border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);'></iframe>", 
                                 unsafe_allow_html=True
