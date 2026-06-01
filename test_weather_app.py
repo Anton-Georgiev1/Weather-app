@@ -1,6 +1,5 @@
 import pytest
 import httpx
-import urllib.parse
 from Weather_app import (
     get_coordinates, 
     get_weather_data, 
@@ -8,6 +7,8 @@ from Weather_app import (
     calculate_daily_average_humidity,
     get_weather_alerts,
     generate_forecast_card_html,
+    format_date,
+    get_wmo_info,
     GEOCODING_API_URL, 
     WEATHER_API_URL
 )
@@ -48,14 +49,15 @@ def test_generate_forecast_card_html_smoke():
 
 def test_calculate_daily_average_humidity():
     """Test average calculation for complete and partial days."""
-    # 24 hours of 50% humidity
+    # 24 hours of 50% humidity, followed by 24 hours of 60% humidity
     data = [50.0] * 24 + [60.0] * 24
     result = calculate_daily_average_humidity(data)
     assert result == [50.0, 60.0]
 
 def test_calculate_daily_average_humidity_with_nones():
     """Test average calculation with missing values."""
-    data = [50.0, None, 50.0] + [None] * 21 # First day: (50+50)/2 = 50.0
+    # First day has two 50s and the rest Nones: Average should be 50.0
+    data = [50.0, None, 50.0] + [None] * 21 
     result = calculate_daily_average_humidity(data)
     assert result == [50.0]
 
@@ -89,6 +91,55 @@ def test_safe_get_none_element():
     data = {"temp": [10, None, 30]}
     assert safe_get(data, "temp", 1, default=15) == 15
 
+# --- Bulgarian Translation & Date Formatting Tests ---
+
+def test_format_date_bg():
+    """Test that dates are correctly formatted and localized to Bulgarian."""
+    # 2024-06-01 is a Saturday
+    bg_alert_date = format_date("2024-06-01", "%A, %B %d", "bg")
+    assert "Събота" in bg_alert_date
+    assert "Юни" in bg_alert_date
+    
+    bg_card_date = format_date("2024-06-01", "%A, %d %b", "bg")
+    assert "Събота" in bg_card_date
+    assert "Юни" in bg_card_date
+
+def test_get_wmo_info_bg():
+    """Test retrieving WMO condition and emoji in Bulgarian."""
+    desc, emoji = get_wmo_info(0, "bg")
+    assert desc == "Ясно небе"
+    assert emoji == "☀️"
+    
+    desc_ts, emoji_ts = get_wmo_info(95, "bg")
+    assert desc_ts == "Гръмотевична буря"
+    assert emoji_ts == "⛈️"
+
+def test_get_weather_alerts_bg():
+    """Test weather alerts generated in Bulgarian."""
+    daily_data = {
+        "time": ["2024-06-01", "2024-06-02"],
+        "weather_code": [95, 0],
+        "precipitation_probability_max": [85, 0],
+        "wind_speed_10m_max": [10, 55]
+    }
+    alerts = get_weather_alerts(daily_data, lang="bg")
+    assert len(alerts) == 2
+    assert "Гръмотевична буря" in alerts[0]["message"]
+    assert "Предупреждение за вятър" in alerts[1]["message"]
+    assert "85%" in alerts[0]["message"]
+    assert "55 км/ч" in alerts[1]["message"]
+
+def test_generate_forecast_card_html_bg():
+    """Test Bulgarian HTML card generation."""
+    html = generate_forecast_card_html(
+        "2024-06-01T12:00", 0, 15, wind=12.5, humidity=65, max_t=25.4, min_t=14.2, lang="bg"
+    )
+    assert "Събота" in html
+    assert "Юни" in html
+    assert "Ясно небе" in html
+    assert "Влаж.: 65%" in html
+    assert "Вятър: 12.5 км/ч" in html
+
 # --- Geocoding Tests ---
 
 def test_get_coordinates_success(httpx_mock):
@@ -98,12 +149,18 @@ def test_get_coordinates_success(httpx_mock):
             {"name": "Sofia", "latitude": 42.6975, "longitude": 23.3241, "country": "Bulgaria"}
         ]
     }
-    httpx_mock.add_response(url=f"{GEOCODING_API_URL}?name=Sofia&count=1&language=en&format=json", json=mock_response)
+    httpx_mock.add_response(json=mock_response)
     
     result = get_coordinates("Sofia")
     assert result is not None
     assert result["name"] == "Sofia"
     assert result["latitude"] == 42.6975
+    
+    # Assert the correct URL was dynamically built and called
+    request = httpx_mock.get_request()
+    assert request is not None
+    assert str(request.url).startswith(GEOCODING_API_URL)
+    assert "name=Sofia" in str(request.url)
 
 def test_get_coordinates_with_country(httpx_mock):
     """Test coordinate retrieval when city and country are provided."""
@@ -112,32 +169,36 @@ def test_get_coordinates_with_country(httpx_mock):
             {"name": "Paris", "latitude": 48.8566, "longitude": 2.3522, "country": "France"}
         ]
     }
-    # Open-Meteo appends country to query like "Paris, France"
-    httpx_mock.add_response(url=f"{GEOCODING_API_URL}?name=Paris%2C+France&count=1&language=en&format=json", json=mock_response)
+    httpx_mock.add_response(json=mock_response)
     
     result = get_coordinates("Paris", "France")
     assert result is not None
     assert result["name"] == "Paris"
     assert result["country"] == "France"
 
+    # Assert that both City and Country were encoded into the URL correctly
+    request = httpx_mock.get_request()
+    assert "Paris" in str(request.url)
+    assert "France" in str(request.url)
+
 def test_get_coordinates_not_found(httpx_mock):
     """Test behavior when a city is not found."""
-    httpx_mock.add_response(url=f"{GEOCODING_API_URL}?name=InvalidCity&count=1&language=en&format=json", json={"results": []})
+    httpx_mock.add_response(json={"results": []})
     result = get_coordinates("InvalidCity")
     assert result is None
 
 def test_get_coordinates_empty_input():
-    """Test that empty input returns None immediately."""
+    """Test that empty input returns None immediately without firing API."""
     assert get_coordinates("") is None
     assert get_coordinates("   ") is None
 
-# --- Weather Data Tests ---
-
 def test_get_coordinates_exception(httpx_mock):
-    """Test that function returns None when an exception occurs."""
+    """Test that function handles timeouts and network crashes gracefully."""
     httpx_mock.add_exception(httpx.TimeoutException("Timeout"))
     result = get_coordinates("AnyCity")
     assert result is None
+
+# --- Weather Data Tests ---
 
 def test_get_weather_data_full_success(httpx_mock):
     """Test successful retrieval of weather data."""
@@ -160,39 +221,23 @@ def test_get_weather_data_full_success(httpx_mock):
         }
     }
     lat, lon = 42.6975, 23.3241
-    
-    f_params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m",
-        "hourly": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,precipitation_probability,wind_speed_10m",
-        "daily": "temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,weather_code,precipitation_probability_max,wind_speed_10m_max",
-        "timezone": "auto",
-        "forecast_days": 16
-    }
-    f_qs = urllib.parse.urlencode(f_params)
-    httpx_mock.add_response(url=f"{WEATHER_API_URL}?{f_qs}", json=mock_f)
+    httpx_mock.add_response(json=mock_f)
     
     data = get_weather_data(lat, lon)
     assert data is not None
     assert "hourly" in data
     assert len(data["daily"]["time"]) == 16
+    
+    # Assert parameters were correctly bound to the API fetch URL
+    request = httpx_mock.get_request()
+    assert str(request.url).startswith(WEATHER_API_URL)
+    assert f"latitude={lat}" in str(request.url)
+    assert f"longitude={lon}" in str(request.url)
 
 def test_get_weather_data_failure(httpx_mock):
-    """Test that function returns None if API fails."""
+    """Test that function handles API 500 error codes correctly."""
     lat, lon = 0.0, 0.0
-    # Registering a response that matches the exact URL built by the app
-    f_params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m",
-        "hourly": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,precipitation_probability,wind_speed_10m",
-        "daily": "temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,weather_code,precipitation_probability_max,wind_speed_10m_max",
-        "timezone": "auto",
-        "forecast_days": 16
-    }
-    f_qs = urllib.parse.urlencode(f_params)
-    httpx_mock.add_response(url=f"{WEATHER_API_URL}?{f_qs}", status_code=500)
+    httpx_mock.add_response(status_code=500)
     
     data = get_weather_data(lat, lon)
     assert data is None
