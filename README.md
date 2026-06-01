@@ -1,4 +1,4 @@
-# Weather App Dashboard 🌤️
+# Weather App Dashboard
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -33,7 +33,7 @@ Most weather apps overwhelm users with cluttered grids and obscure metrics. This
 - **Trend Metrics:** Deep-dive into real-feel temperatures, humidity averages, and wind gusts.
 
 ###  Global by Design
-- **Full Bilingual Support:** Seamlessly switch between **English** and **Български**. Localized date formatting and condition descriptions make it feel like home, no matter where you are.
+- **Full Bilingual Support:** Seamlessly switch between **English** and **Bulgarian**. Localized date formatting and condition descriptions make it feel like home, no matter where you are.
 - **Open-Source Integrity:** Powered by the **Open-Meteo API**. High-fidelity insights, zero API keys required.
 
 ---
@@ -92,6 +92,6 @@ This is a community-driven project. Whether you're fixing a typo or adding a new
 
 ---
 
-## ⚖️ License
+## License
 
-Distributed under the MIT License. Crafted with ❤️ for the open-source community.
+Distributed under the MIT License. Crafted with for the open-source community.
