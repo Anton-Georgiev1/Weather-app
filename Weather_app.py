@@ -1,10 +1,13 @@
 import streamlit as st
 import httpx
 import pandas as pd
+from streamlit_geolocation import streamlit_geolocation
 
 # --- Configuration ---
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
+REVERSE_GEOCODING_API_URL = "https://nominatim.openstreetmap.org/reverse"
+REVERSE_GEOCODING_USER_AGENT = "WeatherAppStreamlit/1.0 (+https://github.com/Anton-Georgiev1/Weather-app)"
 
 WMO_CODES = {
     0: {
@@ -204,7 +207,15 @@ TRANSLATIONS = {
         "card_wind": "Wind",
         "card_rain_chance": "Rain chance",
         "severe_weather": "Severe Weather",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+
+        # Geolocation strings
+        "geo_section_label": "📍 Use your current location",
+        "geo_permission_hint": "Your browser may ask permission to share your location.",
+        "geo_divider_text": "or enter manually",
+        "geo_success_toast": "📍 Location found: {city}, {country}",
+        "geo_header_generic": "Your Current Location",
+        "geo_reverse_lookup_failed": "We found your coordinates but couldn't identify the city name. Showing weather for your current location."
     },
     "bg": {
         "page_title": "Приложение за времето",
@@ -251,7 +262,15 @@ TRANSLATIONS = {
         "card_wind": "Вятър",
         "card_rain_chance": "Шанс за валежи",
         "severe_weather": "Опасно време",
-        "unknown": "Неизвестно"
+        "unknown": "Неизвестно",
+
+        # Geolocation strings
+        "geo_section_label": "📍 Използвайте текущото си местоположение",
+        "geo_permission_hint": "Браузърът може да поиска разрешение за споделяне на местоположението ви.",
+        "geo_divider_text": "или потърсете ръчно",
+        "geo_success_toast": "📍 Местоположението е намерено: {city}, {country}",
+        "geo_header_generic": "Текущото ви местоположение",
+        "geo_reverse_lookup_failed": "Намерихме координатите ви, но не успяхме да определим името на града. Показва се времето за текущото ви местоположение."
     }
 }
 
@@ -304,8 +323,32 @@ def get_coordinates(city: str, country: str | None = None) -> dict | None:
         response.raise_for_status()
         data = response.json()
         return data["results"][0] if "results" in data and data["results"] else None
-    except Exception: 
+    except Exception:
         return None
+
+def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict | None:
+    """Resolve a display name and country for coordinates via OpenStreetMap Nominatim."""
+    params = {"lat": lat, "lon": lon, "format": "jsonv2", "accept-language": lang}
+    headers = {"User-Agent": REVERSE_GEOCODING_USER_AGENT}
+    try:
+        response = httpx.get(REVERSE_GEOCODING_API_URL, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        address = data.get("address", {})
+        name = address.get("city") or address.get("town") or address.get("village") or address.get("county")
+        country = address.get("country")
+        if not name or not country:
+            return None
+        return {"name": name, "country": country}
+    except Exception:
+        return None
+
+def build_location_from_coordinates(lat: float, lon: float, lang: str = "en") -> dict:
+    """Build a location dict (matching get_coordinates' shape) directly from browser-provided coordinates."""
+    resolved = reverse_geocode(lat, lon, lang)
+    if resolved:
+        return {"name": resolved["name"], "country": resolved["country"], "latitude": lat, "longitude": lon}
+    return {"name": TRANSLATIONS[lang]["geo_header_generic"], "country": "", "latitude": lat, "longitude": lon}
 
 def get_weather_data(lat: float, lon: float):
     f_params = {
@@ -563,36 +606,98 @@ def main():
         st.session_state.saved_city = ""
     if "saved_country" not in st.session_state:
         st.session_state.saved_country = ""
+    if "location_source" not in st.session_state:
+        st.session_state.location_source = "manual"
+    if "geo_location" not in st.session_state:
+        st.session_state.geo_location = None
+    if "geo_processed_coords" not in st.session_state:
+        st.session_state.geo_processed_coords = None
 
-    # Input Layout 
-    c_in1, c_in2 = st.columns([1, 1])
-    
-    with c_in1:
-        city_input = st.text_input(
-            t["city_label"], 
-            value=st.session_state.saved_city, 
-            placeholder=t["city_placeholder"]
-        )
-    with c_in2:
-        country_input = st.text_input(
-            t["country_label"], 
-            value=st.session_state.saved_country, 
-            placeholder=t["country_placeholder"]
-        )
+    # Input Layout
+    with st.container(border=True):
+        st.caption(t["geo_section_label"])
+        geo_result = streamlit_geolocation()
+
+        geo_lat = geo_result.get("latitude") if geo_result else None
+        geo_lon = geo_result.get("longitude") if geo_result else None
+
+        if geo_lat is not None and geo_lon is not None:
+            current_coords = (geo_lat, geo_lon)
+            # The component keeps returning the same last-known reading on every rerun, so
+            # also re-trigger when the user has since switched to manual entry (location_source
+            # != "geo") even if the browser hands back identical coordinates as before.
+            is_new_geo_request = (
+                current_coords != st.session_state.geo_processed_coords
+                or st.session_state.location_source != "geo"
+            )
+            if is_new_geo_request:
+                st.session_state.geo_processed_coords = current_coords
+                resolved_location = build_location_from_coordinates(geo_lat, geo_lon, lang)
+                st.session_state.geo_location = resolved_location
+                st.session_state.location_source = "geo"
+                st.session_state.selected_date = None
+                if resolved_location["country"]:
+                    st.session_state.saved_city = resolved_location["name"]
+                    st.session_state.saved_country = resolved_location["country"]
+                    st.toast(t["geo_success_toast"].format(
+                        city=resolved_location["name"], country=resolved_location["country"]
+                    ))
+                else:
+                    st.session_state.saved_city = ""
+                    st.session_state.saved_country = ""
+                st.rerun()
+
+        st.caption(t["geo_permission_hint"])
+        st.caption(t["geo_divider_text"])
+
+        c_in1, c_in2 = st.columns([1, 1])
+
+        with c_in1:
+            city_input = st.text_input(
+                t["city_label"],
+                value=st.session_state.saved_city,
+                placeholder=t["city_placeholder"]
+            )
+        with c_in2:
+            country_input = st.text_input(
+                t["country_label"],
+                value=st.session_state.saved_country,
+                placeholder=t["country_placeholder"]
+            )
 
     # Automatically update our memory state with whatever is currently in the boxes
+    # NOTE: geo_processed_coords is intentionally left untouched here. The geolocation
+    # component keeps returning the same last-known reading on every rerun (it only
+    # sends a new value once the user clicks it again), so clearing this guard would
+    # make the app treat that stale reading as "new" on the next rerun and silently
+    # snap back to the geolocated city/country, discarding the manual edit.
     if city_input != st.session_state.saved_city:
         st.session_state.saved_city = city_input
         st.session_state.selected_date = None  # Clear selected day when user searches for a new city
-        
+        st.session_state.location_source = "manual"
+        st.session_state.geo_location = None
+
     if country_input != st.session_state.saved_country:
         st.session_state.saved_country = country_input
+        st.session_state.location_source = "manual"
+        st.session_state.geo_location = None
 
     # Main Weather Fetching Section
-    if city_input:
+    using_geo_location = (
+        st.session_state.location_source == "geo" and st.session_state.geo_location is not None
+    )
+
+    # The generic fallback name is language-dependent; keep it in sync with the current UI language.
+    if using_geo_location and not st.session_state.geo_location.get("country"):
+        st.session_state.geo_location["name"] = t["geo_header_generic"]
+
+    if using_geo_location or city_input:
         with st.spinner(t["fetching"]):
-            location = get_coordinates(city_input, country_input)
-            
+            location = (
+                st.session_state.geo_location if using_geo_location
+                else get_coordinates(city_input, country_input)
+            )
+
             if location:
                 lat, lon = location["latitude"], location["longitude"]
                 f_data = get_weather_data(lat, lon)
@@ -606,8 +711,14 @@ def main():
                     daily_hum_list = calculate_daily_average_humidity(hourly.get("relative_humidity_2m", []))
 
                     # --- Main Screen Metrics ---
-                    st.header(f"📍 {location['name']}, {location.get('country', '')}")
-                    
+                    location_label = location["name"]
+                    if location.get("country"):
+                        location_label += f", {location['country']}"
+                    st.header(f"📍 {location_label}")
+
+                    if using_geo_location and not location.get("country"):
+                        st.info(t["geo_reverse_lookup_failed"])
+
                     m1, m2, m3, m4, m5, m6 = st.columns(6)
                     with m1:
                         st.metric(t["current_temp"], f"{curr.get('temperature_2m', '--')}°C")

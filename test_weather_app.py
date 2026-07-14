@@ -1,16 +1,19 @@
 import pytest
 import httpx
 from Weather_app import (
-    get_coordinates, 
-    get_weather_data, 
+    get_coordinates,
+    get_weather_data,
     safe_get,
     calculate_daily_average_humidity,
     get_weather_alerts,
     generate_forecast_card_html,
     format_date,
     get_wmo_info,
-    GEOCODING_API_URL, 
-    WEATHER_API_URL
+    reverse_geocode,
+    build_location_from_coordinates,
+    GEOCODING_API_URL,
+    WEATHER_API_URL,
+    REVERSE_GEOCODING_API_URL
 )
 
 # --- Utility Tests ---
@@ -238,6 +241,89 @@ def test_get_weather_data_failure(httpx_mock):
     """Test that function handles API 500 error codes correctly."""
     lat, lon = 0.0, 0.0
     httpx_mock.add_response(status_code=500)
-    
+
     data = get_weather_data(lat, lon)
     assert data is None
+
+# --- Reverse Geocoding Tests ---
+
+def test_reverse_geocode_success(httpx_mock):
+    """Test successful reverse geocoding with a city in the address."""
+    mock_response = {"address": {"city": "Sofia", "country": "Bulgaria"}}
+    httpx_mock.add_response(json=mock_response)
+
+    result = reverse_geocode(42.6975, 23.3241)
+    assert result == {"name": "Sofia", "country": "Bulgaria"}
+
+    request = httpx_mock.get_request()
+    assert str(request.url).startswith(REVERSE_GEOCODING_API_URL)
+
+def test_reverse_geocode_uses_requested_language(httpx_mock):
+    """Test that the UI language is forwarded to Nominatim so results are localized consistently
+    with the forward-geocoding path (which always requests language=en)."""
+    mock_response = {"address": {"city": "Sofia", "country": "Bulgaria"}}
+    httpx_mock.add_response(json=mock_response)
+
+    reverse_geocode(42.6975, 23.3241, lang="bg")
+
+    request = httpx_mock.get_request()
+    assert "accept-language=bg" in str(request.url)
+
+def test_reverse_geocode_town_fallback(httpx_mock):
+    """Test that 'town' is used when 'city' is absent from the address."""
+    mock_response = {"address": {"town": "Bansko", "country": "Bulgaria"}}
+    httpx_mock.add_response(json=mock_response)
+
+    result = reverse_geocode(41.8383, 23.4880)
+    assert result == {"name": "Bansko", "country": "Bulgaria"}
+
+def test_reverse_geocode_missing_country(httpx_mock):
+    """Test that a missing country in the address results in None."""
+    mock_response = {"address": {"city": "Sofia"}}
+    httpx_mock.add_response(json=mock_response)
+
+    result = reverse_geocode(42.6975, 23.3241)
+    assert result is None
+
+def test_reverse_geocode_no_address(httpx_mock):
+    """Test behavior when coordinates resolve to no address data (e.g. open ocean)."""
+    httpx_mock.add_response(json={})
+    result = reverse_geocode(0.0, 0.0)
+    assert result is None
+
+def test_reverse_geocode_exception(httpx_mock):
+    """Test that function handles timeouts and network crashes gracefully."""
+    httpx_mock.add_exception(httpx.TimeoutException("Timeout"))
+    result = reverse_geocode(42.6975, 23.3241)
+    assert result is None
+
+def test_build_location_from_coordinates_success(httpx_mock):
+    """Test that a resolved place name and country are used when reverse geocoding succeeds."""
+    mock_response = {"address": {"city": "Sofia", "country": "Bulgaria"}}
+    httpx_mock.add_response(json=mock_response)
+
+    location = build_location_from_coordinates(42.6975, 23.3241, lang="en")
+    assert location == {
+        "name": "Sofia",
+        "country": "Bulgaria",
+        "latitude": 42.6975,
+        "longitude": 23.3241
+    }
+
+def test_build_location_from_coordinates_fallback(httpx_mock):
+    """Test the generic fallback location when reverse geocoding fails."""
+    httpx_mock.add_response(json={})
+
+    location = build_location_from_coordinates(0.0, 0.0, lang="en")
+    assert location["name"] == "Your Current Location"
+    assert location["country"] == ""
+    assert location["latitude"] == 0.0
+    assert location["longitude"] == 0.0
+
+def test_build_location_from_coordinates_fallback_bg(httpx_mock):
+    """Test the generic fallback location is translated to Bulgarian."""
+    httpx_mock.add_response(json={})
+
+    location = build_location_from_coordinates(0.0, 0.0, lang="bg")
+    assert location["name"] == "Текущото ви местоположение"
+    assert location["country"] == ""

@@ -1,4 +1,5 @@
 streamlit
+streamlit-geolocation
 httpx
 pandas
 pytest
