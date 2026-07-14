@@ -185,6 +185,7 @@ TRANSLATIONS = {
         "alert_precip": "**Alert for {day_name}:** {condition_name} expected! (**{prob}%** chance of precipitation)",
         "alert_wind": "**Wind Advisory for {day_name}:** High wind speeds expected up to **{wind} km/h**.",
         "next_24h": "Immediate Next 24 Hours",
+        "show_past_hours": "Show hours that already passed",
         "hourly_unavailable": "Hourly data unavailable.",
         "forecast_7day": "7-Day Forecast",
         "forecast_14day": "14-Day Forecast",
@@ -241,6 +242,7 @@ TRANSLATIONS = {
         "alert_precip": "**Сигнал за {day_name}:** Очаква се {condition_name}! (**{prob}%** шанс за валежи)",
         "alert_wind": "**Предупреждение за вятър за {day_name}:** Очакват се силни ветрове до **{wind} км/ч**.",
         "next_24h": "Следващите 24 часа",
+        "show_past_hours": "Покажи изминалите часове",
         "hourly_unavailable": "Часовите данни са ненайдостъпни.",
         "forecast_7day": "7-дневна прогноза",
         "forecast_14day": "14-дневна прогноза",
@@ -905,12 +907,35 @@ def main():
                     # --- Immediate 24h Hourly Track ---
                     if hourly and "time" in hourly:
                         st.subheader(t["next_24h"])
-                        num_hours = min(24, len(hourly["time"]))
-                        for i in range(0, num_hours, 6):
+
+                        # Hourly data starts at 00:00 of the current day, so index 0 is
+                        # usually already in the past by the time the user looks at it.
+                        # Find the first hour that hasn't happened yet and default the
+                        # window to start there instead of showing stale hours first.
+                        current_time: str | None = curr.get("time")
+                        current_hour_key = f"{current_time[:13]}:00" if current_time else None
+                        upcoming_start_idx = 0
+                        if current_hour_key:
+                            for idx, time_str in enumerate(hourly["time"]):
+                                if time_str >= current_hour_key:
+                                    upcoming_start_idx = idx
+                                    break
+
+                        if "show_past_hours" not in st.session_state:
+                            st.session_state.show_past_hours = False
+                        st.session_state.show_past_hours = st.toggle(
+                            t["show_past_hours"], value=st.session_state.show_past_hours
+                        )
+
+                        start_idx = 0 if st.session_state.show_past_hours else upcoming_start_idx
+                        end_idx = min(start_idx + 24, len(hourly["time"]))
+                        hour_indices = list(range(start_idx, end_idx))
+
+                        for i in range(0, len(hour_indices), 6):
                             cols = st.columns(6)
                             for j in range(6):
-                                idx = i + j
-                                if idx < num_hours:
+                                if i + j < len(hour_indices):
+                                    idx = hour_indices[i + j]
                                     day_str = hourly["time"][idx][:10]
                                     try:
                                         d_idx = daily["time"].index(day_str)
