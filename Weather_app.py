@@ -569,6 +569,111 @@ def main():
     .forecast-rain.high-prob {
         color: #00B4D8;
     }
+
+    /* --- APP HEADER (title + language selector) --- */
+    .st-key-app_header {
+        margin-bottom: 24px;
+    }
+    .st-key-app_header [data-testid="stMarkdownContainer"] h1 {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin-top: 0;
+    }
+    .st-key-app_header [data-testid="stSelectbox"] {
+        max-width: 220px;
+    }
+
+    /* --- LOCATION CARD (pre-fetch input section) ---
+       NOTE: Streamlit does not actually define --secondary-background-color /
+       --border-color as usable CSS custom properties in this version (verified:
+       they resolve to empty at every scope), so the var() calls below always fall
+       through to their literal fallback. Alpha values are tuned to be clearly
+       visible against both a white and a near-black page background.
+       The card is deliberately left without its own fill (border + shadow only):
+       Streamlit's text inputs already render with its real theme-aware secondary
+       background color, so giving the card a same-toned fill made the inputs
+       visually disappear into it instead of standing out as the main fields. */
+    .st-key-location_card {
+        border-radius: 16px;
+        border: 1px solid var(--border-color, rgba(128,128,128,0.35));
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        padding: 24px;
+    }
+    /* Streamlit's border=True paints its own border/shadow directly on the inner
+       wrapper; !important overrides that inline styling so only the custom border
+       above is visible instead of two stacked borders. */
+    .st-key-location_card [data-testid="stVerticalBlockBorderWrapper"] {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+    .st-key-location_card [data-testid="stTextInput"] label {
+        font-weight: 600;
+    }
+    .st-key-location_card [data-testid="stTextInput"] input {
+        border-radius: 8px;
+        min-height: 44px;
+    }
+
+    /* --- LOCATE CHIP (geolocation button + hints, nested in the location card) --- */
+    .st-key-locate_chip {
+        border-radius: 12px;
+        background: rgba(0, 180, 216, 0.06);
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    .st-key-locate_chip [data-testid="stVerticalBlock"] {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .st-key-locate_chip [data-testid="stCaptionContainer"]:first-of-type {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-color, inherit);
+        opacity: 0.85;
+    }
+    .st-key-locate_chip [data-testid="stCaptionContainer"]:last-of-type {
+        font-size: 0.78rem;
+        font-weight: 400;
+        opacity: 0.6;
+    }
+    /* The streamlit_geolocation component's iframe defaults to filling the full
+       container width even though its actual button is a small square icon on a
+       white background we can't restyle (it's the third-party bundle's own
+       document). Rather than fight the white fill, cap the iframe to the icon's
+       own footprint and frame it deliberately as a small bordered icon button. */
+    .st-key-locate_chip [data-testid="stCustomComponentV1"] {
+        width: 40px !important;
+        max-width: 40px !important;
+        border-radius: 8px;
+        border: 1px solid rgba(128,128,128,0.3);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    /* --- MANUAL-ENTRY DIVIDER (replaces the plain "or enter manually" caption) ---
+       Built as line/text/line flex items rather than a background-matching mask,
+       so it never depends on knowing the exact page/card background color. */
+    .location-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-block: 16px;
+    }
+    .location-divider-line {
+        flex: 1;
+        height: 1px;
+        background: var(--border-color, rgba(128,128,128,0.35));
+    }
+    .location-divider-text {
+        font-size: 0.78rem;
+        font-weight: 500;
+        opacity: 0.6;
+        white-space: nowrap;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -576,21 +681,22 @@ def main():
     t = TRANSLATIONS[current_lang]
     
     # --- Main Page Header Layout ---
-    header_col1, header_col2 = st.columns([4, 1])
-    
-    with header_col1:
-        st.title(t["app_title"])
-        
-    with header_col2:
-        lang_opts = {"English": "en", "Български": "bg"}
-        # The label t["lang_label"] is now clearly visible above the box!
-        selected_lang_name = st.selectbox(
-            label=t["lang_label"],
-            options=list(lang_opts.keys()),
-            index=0 if current_lang == "en" else 1,
-            key="main_language_selector"
-        )
-        lang = lang_opts[selected_lang_name]
+    with st.container(key="app_header"):
+        header_col1, header_col2 = st.columns([4, 1])
+
+        with header_col1:
+            st.title(t["app_title"])
+
+        with header_col2:
+            lang_opts = {"English": "en", "Български": "bg"}
+            # The label t["lang_label"] is now clearly visible above the box!
+            selected_lang_name = st.selectbox(
+                label=t["lang_label"],
+                options=list(lang_opts.keys()),
+                index=0 if current_lang == "en" else 1,
+                key="main_language_selector"
+            )
+            lang = lang_opts[selected_lang_name]
         
         # If the user changes the language, update session state and restart the app
         if lang != current_lang:
@@ -614,41 +720,50 @@ def main():
         st.session_state.geo_processed_coords = None
 
     # Input Layout
-    with st.container(border=True):
-        st.caption(t["geo_section_label"])
-        geo_result = streamlit_geolocation()
+    with st.container(key="location_card"):
+        with st.container(key="locate_chip"):
+            st.caption(t["geo_section_label"])
+            geo_result = streamlit_geolocation()
 
-        geo_lat = geo_result.get("latitude") if geo_result else None
-        geo_lon = geo_result.get("longitude") if geo_result else None
+            geo_lat = geo_result.get("latitude") if geo_result else None
+            geo_lon = geo_result.get("longitude") if geo_result else None
 
-        if geo_lat is not None and geo_lon is not None:
-            current_coords = (geo_lat, geo_lon)
-            # The component keeps returning the same last-known reading on every rerun, so
-            # also re-trigger when the user has since switched to manual entry (location_source
-            # != "geo") even if the browser hands back identical coordinates as before.
-            is_new_geo_request = (
-                current_coords != st.session_state.geo_processed_coords
-                or st.session_state.location_source != "geo"
-            )
-            if is_new_geo_request:
-                st.session_state.geo_processed_coords = current_coords
-                resolved_location = build_location_from_coordinates(geo_lat, geo_lon, lang)
-                st.session_state.geo_location = resolved_location
-                st.session_state.location_source = "geo"
-                st.session_state.selected_date = None
-                if resolved_location["country"]:
-                    st.session_state.saved_city = resolved_location["name"]
-                    st.session_state.saved_country = resolved_location["country"]
-                    st.toast(t["geo_success_toast"].format(
-                        city=resolved_location["name"], country=resolved_location["country"]
-                    ))
-                else:
-                    st.session_state.saved_city = ""
-                    st.session_state.saved_country = ""
-                st.rerun()
+            if geo_lat is not None and geo_lon is not None:
+                current_coords = (geo_lat, geo_lon)
+                # The component keeps returning the same last-known reading on every rerun, so
+                # also re-trigger when the user has since switched to manual entry (location_source
+                # != "geo") even if the browser hands back identical coordinates as before.
+                is_new_geo_request = (
+                    current_coords != st.session_state.geo_processed_coords
+                    or st.session_state.location_source != "geo"
+                )
+                if is_new_geo_request:
+                    st.session_state.geo_processed_coords = current_coords
+                    resolved_location = build_location_from_coordinates(geo_lat, geo_lon, lang)
+                    st.session_state.geo_location = resolved_location
+                    st.session_state.location_source = "geo"
+                    st.session_state.selected_date = None
+                    if resolved_location["country"]:
+                        st.session_state.saved_city = resolved_location["name"]
+                        st.session_state.saved_country = resolved_location["country"]
+                        st.toast(t["geo_success_toast"].format(
+                            city=resolved_location["name"], country=resolved_location["country"]
+                        ))
+                    else:
+                        st.session_state.saved_city = ""
+                        st.session_state.saved_country = ""
+                    st.rerun()
 
-        st.caption(t["geo_permission_hint"])
-        st.caption(t["geo_divider_text"])
+            st.caption(t["geo_permission_hint"])
+
+        st.markdown(
+            '<div class="location-divider">'
+            '<span class="location-divider-line"></span>'
+            f'<span class="location-divider-text">{t["geo_divider_text"]}</span>'
+            '<span class="location-divider-line"></span>'
+            '</div>',
+            unsafe_allow_html=True
+        )
 
         c_in1, c_in2 = st.columns([1, 1])
 
