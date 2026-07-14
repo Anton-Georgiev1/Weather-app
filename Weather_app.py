@@ -944,9 +944,9 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .stat-chip .label {{ font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .5; margin-bottom: 4px; color: var(--text); }}
 .stat-chip .value {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 17px; color: var(--text); }}
 
-/* ---------- 24H STRIP ---------- */
-.hour-strip {{ display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }}
-.hour-card {{ min-width: 96px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
+/* ---------- 24H GRID ---------- */
+.hour-strip {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }}
+.hour-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
 .hour-card .time {{ font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; color: var(--text); }}
 .hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; }}
 .hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
