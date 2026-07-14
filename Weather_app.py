@@ -179,6 +179,7 @@ TRANSLATIONS = {
         "min_temp": "Min Temp",
         "wind_speed": "Wind Speed",
         "humidity": "Humidity",
+        "rain_chance_today": "Rain Chance Today",
         "alerts_header": "⚠️ Weather Alerts for {city}",
         "no_alerts": "No severe storms or high wind alerts detected for {city} over the next 14 days.",
         "alert_precip": "**Alert for {day_name}:** {condition_name} expected! (**{prob}%** chance of precipitation)",
@@ -234,6 +235,7 @@ TRANSLATIONS = {
         "min_temp": "Мин. темп.",
         "wind_speed": "Скорост на вятъра",
         "humidity": "Влажност",
+        "rain_chance_today": "Шанс за дъжд днес",
         "alerts_header": "⚠️ Сигнали за времето за {city}",
         "no_alerts": "Не са засечени сигнали за силни бури или силен вятър за {city} през следващите 14 дни.",
         "alert_precip": "**Сигнал за {day_name}:** Очаква се {condition_name}! (**{prob}%** шанс за валежи)",
@@ -864,7 +866,7 @@ def main():
                     if using_geo_location and not location.get("country"):
                         st.info(t["geo_reverse_lookup_failed"])
 
-                    m1, m2, m3, m4, m5, m6 = st.columns(6)
+                    m1, m2, m3, m4, m5, m6, m7 = st.columns(7)
                     with m1:
                         st.metric(t["current_temp"], f"{curr.get('temperature_2m', '--')}°C")
                     with m2:
@@ -879,6 +881,8 @@ def main():
                         st.metric(t["wind_speed"], f"{wind_speed_val} {wind_unit}")
                     with m6:
                         st.metric(t["humidity"], f"{curr.get('relative_humidity_2m', '--')}%")
+                    with m7:
+                        st.metric(t["rain_chance_today"], f"{safe_get(daily, 'precipitation_probability_max', 0, '--')}%")
 
                     st.divider()
 
