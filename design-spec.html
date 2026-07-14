@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weather Dashboard — Design Spec</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   WEATHER DASHBOARD — DESIGN SPEC (static HTML, no JS needed)
+   4 seasonal themes: change <body class="..."> to
+   theme-spring | theme-summer | theme-autumn | theme-winter
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--page-bg);
+  min-height: 100vh;
+}
+h1,h2,h3,.display { font-family: 'Manrope', sans-serif; }
+a { color: inherit; }
+a:hover { opacity: .8; }
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 8px; }
+
+/* ---------- THEMES (CSS variables) ---------- */
+.theme-spring {
+  --page-bg: linear-gradient(160deg, #f2f7f0, #f7eef3);
+  --surface: #fcfdfb; --border: #d7ddd4; --text: #2b332c;
+  --accent: #4d9e5f; --accent-deep: #35804a; --accent-soft: #e2f0e2;
+  --accent-grad: linear-gradient(135deg, #4d9e5f, #c47a9a);
+  --hero-grad: linear-gradient(135deg, #e7f2e5, #f4ecf1);
+  --accent-shadow: rgba(77,158,95,.3); --card-shadow: rgba(40,50,42,.08);
+}
+.theme-summer {
+  --page-bg: linear-gradient(160deg, #f7f3e6, #e9f0f7);
+  --surface: #fdfcf6; --border: #ddd6c2; --text: #29303b;
+  --accent: #e0a83b; --accent-deep: #b06c22; --accent-soft: #f5ecd2;
+  --accent-grad: linear-gradient(135deg, #e0a83b, #4c8fc9);
+  --hero-grad: linear-gradient(135deg, #f5eccd, #e6eef6);
+  --accent-shadow: rgba(210,140,50,.32); --card-shadow: rgba(40,48,60,.08);
+}
+.theme-autumn {
+  --page-bg: linear-gradient(160deg, #f5efe4, #f0e4dd);
+  --surface: #fbf7ef; --border: #d9cbb8; --text: #342c25;
+  --accent: #c26a2e; --accent-deep: #9c5324; --accent-soft: #f0e0cd;
+  --accent-grad: linear-gradient(135deg, #c26a2e, #8a5a44);
+  --hero-grad: linear-gradient(135deg, #f1e4cf, #ecdfd4);
+  --accent-shadow: rgba(190,105,45,.32); --card-shadow: rgba(50,40,32,.09);
+}
+.theme-winter {
+  --page-bg: linear-gradient(160deg, #f2f4f7, #eef0f5);
+  --surface: #fbfcfd; --border: #d5dae2; --text: #2b323d;
+  --accent: #5d94bd; --accent-deep: #3b6d94; --accent-soft: #e5ecf1;
+  --accent-grad: linear-gradient(135deg, #5d94bd, #b9c2cd);
+  --hero-grad: linear-gradient(135deg, #e8eef3, #ebeef3);
+  --accent-shadow: rgba(93,148,189,.3); --card-shadow: rgba(43,50,61,.08);
+}
+
+.page { max-width: 1360px; margin: 0 auto; padding: 28px 32px 80px; }
+
+/* ---------- HEADER ---------- */
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding-bottom: 22px; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-icon {
+  width: 44px; height: 44px; border-radius: 12px; background: var(--accent-grad);
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  box-shadow: 0 4px 14px var(--accent-shadow);
+}
+.brand-title { font-family: 'Manrope'; font-weight: 800; font-size: 21px; letter-spacing: -.01em; }
+.brand-sub { font-size: 12.5px; opacity: .55; font-weight: 500; }
+.controls { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.season-row { display: flex; align-items: center; gap: 8px; }
+.season-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .5; }
+.season-swatch {
+  width: 30px; height: 30px; border-radius: 9px; display: flex; align-items: center;
+  justify-content: center; font-size: 15px; cursor: pointer; border: 2px solid transparent;
+}
+.season-swatch.active { background: var(--accent-soft); border-color: var(--accent); }
+.pill-group { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 2px; }
+.pill { flex: 1; padding: 6px 12px; border: none; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text); opacity: .55; font-family: inherit; }
+.pill.active { background: var(--accent-grad); color: #fff; opacity: 1; }
+
+/* ---------- SEARCH CARD ---------- */
+.search-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px; box-shadow: 0 2px 12px var(--card-shadow); margin-bottom: 22px; }
+.search-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.geo-chip { width: 38px; height: 38px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; }
+.geo-hint { font-size: 12.5px; opacity: .6; }
+.divider-row { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 280px; }
+.divider-row .line { flex: 1; height: 1px; background: var(--border); }
+.divider-row .or { font-size: 11.5px; font-weight: 600; opacity: .5; white-space: nowrap; }
+.search-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; }
+.field label { font-size: 12px; font-weight: 700; opacity: .6; display: block; margin-bottom: 5px; }
+.field input { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--border); padding: 0 12px; font-size: 13.5px; font-family: inherit; background: var(--surface); color: var(--text); }
+.field input::placeholder { opacity: .5; }
+.btn-primary { width: 100%; height: 42px; border-radius: 10px; border: none; background: var(--accent-grad); color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 3px 10px var(--accent-shadow); font-family: inherit; }
+.search-action { display: flex; align-items: flex-end; }
+
+/* ---------- LOCATION + HERO ---------- */
+.location { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }
+.location .name { font-family: 'Manrope'; font-weight: 800; font-size: 19px; }
+.hero {
+  background: var(--hero-grad); border: 1px solid var(--border); border-radius: 18px;
+  padding: 26px 28px; margin-bottom: 20px; box-shadow: 0 4px 20px var(--card-shadow);
+  display: grid; grid-template-columns: minmax(220px,1fr) 2fr; gap: 24px; align-items: center;
+}
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; } }
+.hero-main { display: flex; align-items: center; gap: 16px; }
+.hero-emoji { font-size: 56px; line-height: 1; }
+.hero-temp { font-family: 'Manrope'; font-weight: 800; font-size: 44px; line-height: 1; }
+.hero-feels { font-size: 13px; opacity: .65; font-weight: 500; margin-top: 4px; }
+.hero-desc { font-size: 13.5px; font-weight: 700; color: var(--accent-deep); margin-top: 2px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.stat-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; }
+.stat-chip .label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .5; margin-bottom: 4px; }
+.stat-chip .value { font-family: 'Manrope'; font-weight: 700; font-size: 17px; }
+
+/* ---------- ALERTS ---------- */
+.alert { display: flex; align-items: center; gap: 10px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 11px 16px; margin-bottom: 8px; }
+.alert .text { font-size: 13.5px; font-weight: 600; color: var(--accent-deep); }
+
+/* ---------- HOURLY STRIP ---------- */
+.section-title { font-family: 'Manrope'; font-weight: 800; font-size: 16px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 22px 0 12px; }
+.checkbox-label { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; opacity: .7; cursor: pointer; }
+.checkbox-label input { width: 15px; height: 15px; accent-color: var(--accent-deep); }
+.hour-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.hour-card { min-width: 96px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }
+.hour-card .time { font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; }
+.hour-card .emoji { font-size: 24px; margin-bottom: 2px; }
+.hour-card .temp { font-family: 'Manrope'; font-weight: 700; font-size: 15px; }
+.hour-card .rain { font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 2px; }
+
+/* ---------- TABS ---------- */
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin: 22px 0 18px; }
+.tab { padding: 10px 16px; border: none; background: transparent; font-size: 13.5px; font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text); opacity: .5; margin-bottom: -1px; font-family: inherit; }
+.tab.active { border-bottom-color: var(--accent-deep); opacity: 1; }
+
+/* ---------- 7-DAY CARDS ---------- */
+.day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.day-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; cursor: pointer; }
+.day-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }
+.day-card .day { font-size: 12.5px; font-weight: 700; margin-bottom: 6px; }
+.day-card .emoji { font-size: 32px; margin-bottom: 6px; }
+.day-card .desc { font-size: 11.5px; font-weight: 600; color: var(--accent-deep); margin-bottom: 10px; min-height: 14px; }
+.day-card .temps { font-family: 'Manrope'; font-weight: 700; font-size: 15px; }
+.day-card .temps .min { opacity: .45; font-weight: 600; }
+.day-card .meta { display: flex; justify-content: center; gap: 10px; font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+
+/* ---------- 14-DAY TABLE ---------- */
+.table-14 { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 24px; }
+.row-14 { display: grid; grid-template-columns: 110px 32px 1fr 90px 70px 80px; align-items: center; gap: 12px; padding: 11px 18px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.row-14:last-child { border-bottom: none; }
+.row-14:hover { background: var(--accent-soft); }
+.row-14 .day { font-size: 12.5px; font-weight: 700; }
+.row-14 .emoji { font-size: 20px; }
+.row-14 .desc { font-size: 12.5px; font-weight: 600; opacity: .7; }
+.row-14 .temps { font-family: 'Manrope'; font-weight: 700; font-size: 13.5px; text-align: right; }
+.row-14 .temps .min { opacity: .4; font-weight: 600; }
+.row-14 .rain, .row-14 .wind { font-size: 11.5px; opacity: .55; font-weight: 600; text-align: right; }
+@media (max-width: 640px) { .row-14 { grid-template-columns: 90px 28px 1fr 80px; } .row-14 .rain, .row-14 .wind { display: none; } }
+
+/* ---------- RADAR ---------- */
+.radar-frame { border-radius: 14px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 16px var(--card-shadow); }
+.radar-frame iframe { display: block; width: 100%; height: 520px; border: 0; }
+.btn-link { display: inline-block; margin-bottom: 14px; padding: 11px 20px; border-radius: 10px; background: var(--accent-grad); color: #fff; font-weight: 700; font-size: 13.5px; text-decoration: none; box-shadow: 0 3px 10px var(--accent-shadow); }
+
+.footer { text-align: center; font-size: 11.5px; opacity: .4; font-weight: 500; padding-top: 16px; }
+</style>
+</head>
+
+<!-- Change to theme-spring / theme-summer / theme-autumn / theme-winter -->
+<body class="theme-summer">
+<div class="page">
+
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">☀️</div>
+      <div>
+        <div class="brand-title">Weather Dashboard</div>
+        <div class="brand-sub">Summer · Sofia forecast, styled to the season</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="season-row">
+        <span class="season-label">Season</span>
+        <div class="season-swatch" title="Spring">🌸</div>
+        <div class="season-swatch active" title="Summer">☀️</div>
+        <div class="season-swatch" title="Autumn">🍂</div>
+        <div class="season-swatch" title="Winter">❄️</div>
+      </div>
+      <div class="pill-group">
+        <button class="pill active">EN</button>
+        <button class="pill">BG</button>
+      </div>
+      <div class="pill-group">
+        <button class="pill active">°C</button>
+        <button class="pill">°F</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="search-card">
+    <div class="search-top">
+      <div class="geo-chip" title="Use current location">📍</div>
+      <span class="geo-hint">Tap the pin to use your location</span>
+      <div class="divider-row"><span class="line"></span><span class="or">or enter manually</span><span class="line"></span></div>
+    </div>
+    <div class="search-fields">
+      <div class="field"><label>City</label><input placeholder="Enter city name..." value="Sofia"></div>
+      <div class="field"><label>Country</label><input placeholder="Enter country name..." value="Bulgaria"></div>
+      <div class="search-action"><button class="btn-primary">Search</button></div>
+    </div>
+  </section>
+
+  <div class="location"><span>📍</span><span class="name">Sofia, Bulgaria</span></div>
+
+  <section class="hero">
+    <div class="hero-main">
+      <div class="hero-emoji">☀️</div>
+      <div>
+        <div class="hero-temp">31°C</div>
+        <div class="hero-feels">Feels like 33°C</div>
+        <div class="hero-desc">Sunny</div>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-chip"><div class="label">Day Max</div><div class="value">33°C</div></div>
+      <div class="stat-chip"><div class="label">Day Min</div><div class="value">19°C</div></div>
+      <div class="stat-chip"><div class="label">Wind</div><div class="value">14 km/h</div></div>
+      <div class="stat-chip"><div class="label">Humidity</div><div class="value">48%</div></div>
+      <div class="stat-chip"><div class="label">Rain Chance</div><div class="value">10%</div></div>
+    </div>
+  </section>
+
+  <div class="alert"><span>⚠️</span><span class="text">Thunderstorm expected Thu, Jul 16 (72% precipitation chance).</span></div>
+
+  <div class="section-head">
+    <div class="section-title">Next 24 Hours</div>
+    <label class="checkbox-label"><input type="checkbox"> Show past hours</label>
+  </div>
+  <div class="hour-strip">
+    <div class="hour-card"><div class="time">14:00</div><div class="emoji">☀️</div><div class="temp">31°C</div><div class="rain">5%</div></div>
+    <div class="hour-card"><div class="time">15:00</div><div class="emoji">☀️</div><div class="temp">32°C</div><div class="rain">5%</div></div>
+    <div class="hour-card"><div class="time">16:00</div><div class="emoji">🌤️</div><div class="temp">33°C</div><div class="rain">8%</div></div>
+    <div class="hour-card"><div class="time">17:00</div><div class="emoji">🌤️</div><div class="temp">32°C</div><div class="rain">10%</div></div>
+    <div class="hour-card"><div class="time">18:00</div><div class="emoji">⛅</div><div class="temp">30°C</div><div class="rain">12%</div></div>
+    <div class="hour-card"><div class="time">19:00</div><div class="emoji">⛅</div><div class="temp">28°C</div><div class="rain">15%</div></div>
+    <div class="hour-card"><div class="time">20:00</div><div class="emoji">🌤️</div><div class="temp">26°C</div><div class="rain">10%</div></div>
+    <div class="hour-card"><div class="time">21:00</div><div class="emoji">🌙</div><div class="temp">24°C</div><div class="rain">5%</div></div>
+    <div class="hour-card"><div class="time">22:00</div><div class="emoji">🌙</div><div class="temp">22°C</div><div class="rain">5%</div></div>
+    <div class="hour-card"><div class="time">23:00</div><div class="emoji">🌙</div><div class="temp">21°C</div><div class="rain">5%</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active">7-Day Forecast</button>
+    <button class="tab">14-Day Forecast</button>
+    <button class="tab">Live Radar</button>
+  </div>
+
+  <!-- TAB 1: 7-day cards -->
+  <div class="day-grid">
+    <div class="day-card"><div class="day">Tue</div><div class="emoji">☀️</div><div class="desc">Sunny</div><div class="temps">33°C <span class="min">/ 19°C</span></div><div class="meta"><span>💧 10%</span><span>💨 14</span></div></div>
+    <div class="day-card"><div class="day">Wed</div><div class="emoji">🌤️</div><div class="desc">Mostly Clear</div><div class="temps">32°C <span class="min">/ 18°C</span></div><div class="meta"><span>💧 15%</span><span>💨 12</span></div></div>
+    <div class="day-card"><div class="day">Thu</div><div class="emoji">⛈️</div><div class="desc">Thunderstorm</div><div class="temps">28°C <span class="min">/ 17°C</span></div><div class="meta"><span>💧 72%</span><span>💨 26</span></div></div>
+    <div class="day-card"><div class="day">Fri</div><div class="emoji">⛅</div><div class="desc">Partly Cloudy</div><div class="temps">29°C <span class="min">/ 16°C</span></div><div class="meta"><span>💧 20%</span><span>💨 18</span></div></div>
+    <div class="day-card"><div class="day">Sat</div><div class="emoji">☀️</div><div class="desc">Sunny</div><div class="temps">31°C <span class="min">/ 17°C</span></div><div class="meta"><span>💧 5%</span><span>💨 10</span></div></div>
+    <div class="day-card"><div class="day">Sun</div><div class="emoji">☀️</div><div class="desc">Sunny</div><div class="temps">32°C <span class="min">/ 18°C</span></div><div class="meta"><span>💧 5%</span><span>💨 11</span></div></div>
+    <div class="day-card"><div class="day">Mon</div><div class="emoji">🌡️</div><div class="desc">Heat Wave</div><div class="temps">35°C <span class="min">/ 21°C</span></div><div class="meta"><span>💧 3%</span><span>💨 9</span></div></div>
+  </div>
+
+  <!-- TAB 2: 14-day table (shown here for spec; hide behind tab in the app) -->
+  <div class="section-title" style="margin-bottom:12px;">14-Day Forecast (table layout)</div>
+  <div class="table-14">
+    <div class="row-14"><div class="day">Tue, Jul 14</div><div class="emoji">☀️</div><div class="desc">Sunny</div><div class="temps">33°C<span class="min"> / 19°C</span></div><div class="rain">💧 10%</div><div class="wind">💨 14</div></div>
+    <div class="row-14"><div class="day">Wed, Jul 15</div><div class="emoji">🌤️</div><div class="desc">Mostly Clear</div><div class="temps">32°C<span class="min"> / 18°C</span></div><div class="rain">💧 15%</div><div class="wind">💨 12</div></div>
+    <div class="row-14"><div class="day">Thu, Jul 16</div><div class="emoji">⛈️</div><div class="desc">Thunderstorm</div><div class="temps">28°C<span class="min"> / 17°C</span></div><div class="rain">💧 72%</div><div class="wind">💨 26</div></div>
+    <div class="row-14"><div class="day">Fri, Jul 17</div><div class="emoji">⛅</div><div class="desc">Partly Cloudy</div><div class="temps">29°C<span class="min"> / 16°C</span></div><div class="rain">💧 20%</div><div class="wind">💨 18</div></div>
+    <div class="row-14"><div class="day">Sat, Jul 18</div><div class="emoji">☀️</div><div class="desc">Sunny</div><div class="temps">31°C<span class="min"> / 17°C</span></div><div class="rain">💧 5%</div><div class="wind">💨 10</div></div>
+  </div>
+
+  <!-- TAB 3: radar -->
+  <div class="section-title" style="margin-bottom:12px;">Live Radar (tab content)</div>
+  <a class="btn-link" href="https://www.windy.com/-Weather-radar-radar?radar,42.6977,23.3219,6" target="_blank">🌍 Open Full Radar on Windy.com</a>
+  <div class="radar-frame">
+    <iframe src="https://embed.windy.com/embed2.html?lat=42.6977&lon=23.3219&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&calendar=now&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1"></iframe>
+  </div>
+
+  <div class="footer">Weather data via Open-Meteo API</div>
+</div>
+</body>
+</html>

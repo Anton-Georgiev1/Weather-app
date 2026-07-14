@@ -12,6 +12,75 @@ WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 REVERSE_GEOCODING_API_URL = "https://nominatim.openstreetmap.org/reverse"
 REVERSE_GEOCODING_USER_AGENT = "WeatherAppStreamlit/1.0 (+https://github.com/Anton-Georgiev1/Weather-app)"
 
+# Seasonal color palettes, ported from seasonal-themes.html. Each value is injected
+# as a CSS custom property so the same stylesheet can re-skin the whole app per season.
+SEASON_THEMES: dict[str, dict[str, str]] = {
+    "spring": {
+        "emoji": "🌸",
+        "label_en": "Spring",
+        "label_bg": "Пролет",
+        "page_bg": "linear-gradient(160deg, #f2f7f0, #f7eef3)",
+        "surface": "#fcfdfb",
+        "border": "#d7ddd4",
+        "text": "#2b332c",
+        "accent": "#4d9e5f",
+        "accent_deep": "#35804a",
+        "accent_soft": "#e2f0e2",
+        "accent_grad": "linear-gradient(135deg, #4d9e5f, #c47a9a)",
+        "hero_grad": "linear-gradient(135deg, #e7f2e5, #f4ecf1)",
+        "accent_shadow": "rgba(77,158,95,.30)",
+        "card_shadow": "rgba(40,50,42,.08)",
+    },
+    "summer": {
+        "emoji": "☀️",
+        "label_en": "Summer",
+        "label_bg": "Лято",
+        "page_bg": "linear-gradient(160deg, #f7f3e6, #e9f0f7)",
+        "surface": "#fdfcf6",
+        "border": "#ddd6c2",
+        "text": "#29303b",
+        "accent": "#e0a83b",
+        "accent_deep": "#b06c22",
+        "accent_soft": "#f5ecd2",
+        "accent_grad": "linear-gradient(135deg, #e0a83b, #4c8fc9)",
+        "hero_grad": "linear-gradient(135deg, #f5eccd, #e6eef6)",
+        "accent_shadow": "rgba(210,140,50,.32)",
+        "card_shadow": "rgba(40,48,60,.08)",
+    },
+    "autumn": {
+        "emoji": "🍂",
+        "label_en": "Autumn",
+        "label_bg": "Есен",
+        "page_bg": "linear-gradient(160deg, #f5efe4, #f0e4dd)",
+        "surface": "#fbf7ef",
+        "border": "#d9cbb8",
+        "text": "#342c25",
+        "accent": "#c26a2e",
+        "accent_deep": "#9c5324",
+        "accent_soft": "#f0e0cd",
+        "accent_grad": "linear-gradient(135deg, #c26a2e, #8a5a44)",
+        "hero_grad": "linear-gradient(135deg, #f1e4cf, #ecdfd4)",
+        "accent_shadow": "rgba(190,105,45,.32)",
+        "card_shadow": "rgba(50,40,32,.09)",
+    },
+    "winter": {
+        "emoji": "❄️",
+        "label_en": "Winter",
+        "label_bg": "Зима",
+        "page_bg": "linear-gradient(160deg, #f2f4f7, #eef0f5)",
+        "surface": "#fbfcfd",
+        "border": "#d5dae2",
+        "text": "#2b323d",
+        "accent": "#5d94bd",
+        "accent_deep": "#3b6d94",
+        "accent_soft": "#e5ecf1",
+        "accent_grad": "linear-gradient(135deg, #5d94bd, #b9c2cd)",
+        "hero_grad": "linear-gradient(135deg, #e8eef3, #ebeef3)",
+        "accent_shadow": "rgba(93,148,189,.30)",
+        "card_shadow": "rgba(43,50,61,.08)",
+    },
+}
+
 WMO_CODES = {
     0: {
         "en": ("Clear sky", "☀️"),
@@ -137,6 +206,16 @@ DAYS_BG = {
     "Sunday": "Неделя"
 }
 
+DAYS_BG_SHORT = {
+    "Mon": "Пон",
+    "Tue": "Вт",
+    "Wed": "Ср",
+    "Thu": "Чет",
+    "Fri": "Пет",
+    "Sat": "Съб",
+    "Sun": "Нед"
+}
+
 MONTHS_BG = {
     "January": "Януари",
     "February": "Февруари",
@@ -182,8 +261,8 @@ TRANSLATIONS = {
         "rain_chance_today": "Rain Chance Today",
         "alerts_header": "⚠️ Weather Alerts for {city}",
         "no_alerts": "No severe storms or high wind alerts detected for {city} over the next 14 days.",
-        "alert_precip": "**Alert for {day_name}:** {condition_name} expected! (**{prob}%** chance of precipitation)",
-        "alert_wind": "**Wind Advisory for {day_name}:** High wind speeds expected up to **{wind} km/h**.",
+        "alert_precip": "<strong>Alert for {day_name}:</strong> {condition_name} expected! (<strong>{prob}%</strong> chance of precipitation)",
+        "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind} km/h</strong>.",
         "next_24h": "Immediate Next 24 Hours",
         "show_past_hours": "Show hours that already passed",
         "hourly_unavailable": "Hourly data unavailable.",
@@ -196,11 +275,11 @@ TRANSLATIONS = {
         "daily_unavailable": "Daily forecast data unavailable.",
         "fetch_failed": "Failed to retrieve weather data. Try a different city.",
         "loc_not_found": "Location not found. Please verify the city and country name.",
-        
+
         # New Translations Added!
         "lang_label": "Language",
         "open_windy": "🌍 Open Full Radar on Windy.com",
-        
+
         # Card strings
         "card_current_temp": "Current Temp",
         "card_feels_like": "Feels like",
@@ -215,12 +294,17 @@ TRANSLATIONS = {
         "unknown": "Unknown",
 
         # Geolocation strings
-        "geo_section_label": "📍 Use your current location",
-        "geo_permission_hint": "Your browser may ask permission to share your location.",
+        "geo_section_label": "Tap the pin to use your location",
         "geo_divider_text": "or enter manually",
         "geo_success_toast": "📍 Location found: {city}, {country}",
         "geo_header_generic": "Your Current Location",
-        "geo_reverse_lookup_failed": "We found your coordinates but couldn't identify the city name. Showing weather for your current location."
+        "geo_reverse_lookup_failed": "We found your coordinates but couldn't identify the city name. Showing weather for your current location.",
+
+        # Header / theme strings
+        "brand_title": "Weather Dashboard",
+        "brand_sub": "Live forecast, styled to the season",
+        "season_label": "Season",
+        "search_button": "Search",
     },
     "bg": {
         "page_title": "Приложение за времето",
@@ -239,8 +323,8 @@ TRANSLATIONS = {
         "rain_chance_today": "Шанс за дъжд днес",
         "alerts_header": "⚠️ Сигнали за времето за {city}",
         "no_alerts": "Не са засечени сигнали за силни бури или силен вятър за {city} през следващите 14 дни.",
-        "alert_precip": "**Сигнал за {day_name}:** Очаква се {condition_name}! (**{prob}%** шанс за валежи)",
-        "alert_wind": "**Предупреждение за вятър за {day_name}:** Очакват се силни ветрове до **{wind} км/ч**.",
+        "alert_precip": "<strong>Сигнал за {day_name}:</strong> Очаква се {condition_name}! (<strong>{prob}%</strong> шанс за валежи)",
+        "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind} км/ч</strong>.",
         "next_24h": "Следващите 24 часа",
         "show_past_hours": "Покажи изминалите часове",
         "hourly_unavailable": "Часовите данни са ненайдостъпни.",
@@ -253,11 +337,11 @@ TRANSLATIONS = {
         "daily_unavailable": "Данните за ежедневната прогноза са недостъпни.",
         "fetch_failed": "Неуспешно извличане на данни за времето. Опитайте с друг град.",
         "loc_not_found": "Местоположението не е намерено. Моля, проверете името на града и държавата.",
-        
+
         # New Translations Added!
         "lang_label": "Език",
         "open_windy": "🌍 Отвори пълния радар на Windy.com",
-        
+
         # Card strings
         "card_current_temp": "Текуща темп.",
         "card_feels_like": "Усеща се като",
@@ -272,12 +356,17 @@ TRANSLATIONS = {
         "unknown": "Неизвестно",
 
         # Geolocation strings
-        "geo_section_label": "📍 Използвайте текущото си местоположение",
-        "geo_permission_hint": "Браузърът може да поиска разрешение за споделяне на местоположението ви.",
+        "geo_section_label": "Докоснете иглата за текущото ви местоположение",
         "geo_divider_text": "или потърсете ръчно",
         "geo_success_toast": "📍 Местоположението е намерено: {city}, {country}",
         "geo_header_generic": "Текущото ви местоположение",
-        "geo_reverse_lookup_failed": "Намерихме координатите ви, но не успяхме да определим името на града. Показва се времето за текущото ви местоположение."
+        "geo_reverse_lookup_failed": "Намерихме координатите ви, но не успяхме да определим името на града. Показва се времето за текущото ви местоположение.",
+
+        # Header / theme strings
+        "brand_title": "Табло за времето",
+        "brand_sub": "Прогноза на живо, стилизирана според сезона",
+        "season_label": "Сезон",
+        "search_button": "Търсене",
     }
 }
 
@@ -288,7 +377,7 @@ def format_date(date_input: str, format_str: str, lang: str) -> str:
         dt = pd.to_datetime(date_input)  # pyright: ignore[reportUnknownMemberType]
     except Exception:
         return str(date_input)
-        
+
     if lang == "bg":
         if format_str == "%A, %B %d":
             day_name = DAYS_BG.get(dt.strftime("%A"), dt.strftime("%A"))
@@ -300,7 +389,9 @@ def format_date(date_input: str, format_str: str, lang: str) -> str:
             return f"{day_name}, {dt.strftime('%d')} {month_name}"
         elif format_str == "%H:00":
             return dt.strftime("%H:00")
-            
+        elif format_str == "%a":
+            return DAYS_BG_SHORT.get(dt.strftime("%a"), dt.strftime("%a"))
+
     return dt.strftime(format_str)
 
 def get_wmo_info(code: int, lang: str = "en") -> tuple[str, str]:
@@ -309,9 +400,16 @@ def get_wmo_info(code: int, lang: str = "en") -> tuple[str, str]:
         return code_data[lang]
     if code_data and "en" in code_data:
         return code_data["en"]
-    
+
     default_desc = "Unknown" if lang == "en" else "Неизвестно"
     return (default_desc, "❓")
+
+def format_temperature(value_celsius: float | None, unit: str) -> str:
+    """Format a Celsius reading for display, converting to Fahrenheit when requested."""
+    if value_celsius is None:
+        return f"--°{unit}"
+    display_value = value_celsius * 9 / 5 + 32 if unit == "F" else value_celsius
+    return f"{round(display_value, 1)}°{unit}"
 
 def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any = None) -> Any:
     """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
@@ -381,7 +479,7 @@ def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
         "timezone": "auto",
         "forecast_days": 16
     }
-    
+
     try:
         f_resp = httpx.get(WEATHER_API_URL, params=f_params, timeout=10)
         f_resp.raise_for_status()
@@ -404,13 +502,13 @@ def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en") -> list[dic
     alerts: list[dict[str, Any]] = []
     if not daily_data or "time" not in daily_data:
         return alerts
-    
+
     for i in range(len(daily_data["time"])):
         wcode = safe_get(daily_data, "weather_code", i)
         prob = safe_get(daily_data, "precipitation_probability_max", i, 0)
         wind = safe_get(daily_data, "wind_speed_10m_max", i, 0)
         day_name = format_date(daily_data["time"][i], "%A, %B %d", lang)
-        
+
         if wcode in [65, 67, 75, 82, 86, 95, 96, 99]:
             condition_name = get_wmo_info(wcode, lang)[0]
             msg_tpl = TRANSLATIONS[lang]["alert_precip"]
@@ -418,7 +516,7 @@ def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en") -> list[dic
                 "type": "error",
                 "message": msg_tpl.format(day_name=day_name, condition_name=condition_name, prob=prob)
             })
-        
+
         if wind is not None and wind > 50:
             msg_tpl = TRANSLATIONS[lang]["alert_wind"]
             alerts.append({
@@ -440,7 +538,8 @@ def generate_forecast_card_html(
     hour_t: float | None = None,
     hour_app: float | None = None,
     is_hourly: bool = False,
-    lang: str = "en"
+    lang: str = "en",
+    unit: str = "C"
 ) -> str:
     """Generate the HTML for a forecast card."""
     try:
@@ -450,7 +549,7 @@ def generate_forecast_card_html(
 
     resolved_code = code if code is not None else -1
     desc, emoji = get_wmo_info(resolved_code, lang)
-    
+
     desc_class = ""
     if resolved_code == 96:
         desc_class = "desc-hail"
@@ -461,21 +560,21 @@ def generate_forecast_card_html(
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
     except (ValueError, TypeError):
         rain_prob_val = 0
-        
+
     card_bg_class = "rain-bg" if rain_prob_val > 30 else ""
     rain_text_class = "high-prob" if rain_prob_val > 20 else ""
-    
+
     t = TRANSLATIONS[lang]
-    
+
     wind_unit = "km/h" if lang == "en" else "км/ч"
     wind_str = f"{round(wind, 1)} {wind_unit}" if wind is not None else f"-- {wind_unit}"
     humidity_str = f"{int(humidity)}%" if humidity is not None else "--%"
-    max_t_str = f"{round(max_t, 1)}°" if max_t is not None else "--°"
-    min_t_str = f"{round(min_t, 1)}°" if min_t is not None else "--°"
-    
+    max_t_str = format_temperature(max_t, unit)
+    min_t_str = format_temperature(min_t, unit)
+
     if is_hourly:
-        hour_t_str = f"{round(hour_t, 1)}°" if hour_t is not None else "--°"
-        hour_app_str = f"{round(hour_app, 1)}°" if hour_app is not None else "--°"
+        hour_t_str = format_temperature(hour_t, unit)
+        hour_app_str = format_temperature(hour_app, unit)
         temp_html = (
             f"<div class='temp-primary'>{t['card_current_temp']}: {hour_t_str}</div>"
             f"<div class='temp-secondary mb-small'>{t['card_feels_like']} {hour_app_str}</div>"
@@ -483,8 +582,8 @@ def generate_forecast_card_html(
             f"<div class='temp-tertiary mb-small'>{t['card_day_min']}: {min_t_str}</div>"
         )
     else:
-        app_max_str = f"{round(app_max, 1)}°" if app_max is not None else "--°"
-        app_min_str = f"{round(app_min, 1)}°" if app_min is not None else "--°"
+        app_max_str = format_temperature(app_max, unit)
+        app_min_str = format_temperature(app_min, unit)
         temp_html = (
             f"<div class='temp-primary'>{t['card_max']}: {max_t_str}</div>"
             f"<div class='temp-secondary'>{t['card_feels_like']} {app_max_str}</div>"
@@ -506,236 +605,486 @@ def generate_forecast_card_html(
         f"</div>"
     )
 
-def render_forecast_card(*args: Any, **kwargs: Any) -> None:
-    html_content = generate_forecast_card_html(*args, **kwargs)
-    st.markdown(html_content, unsafe_allow_html=True)
+def generate_forecast_row_html(
+    date_str: str,
+    code: int | None,
+    rain_prob: float | int | str | None,
+    wind: float | None,
+    max_t: float | None,
+    min_t: float | None,
+    lang: str = "en",
+    unit: str = "C"
+) -> str:
+    """Generate the HTML for a single compact 14-day forecast table row."""
+    try:
+        label = format_date(date_str, "%A, %d %b", lang)
+    except Exception:
+        label = TRANSLATIONS[lang]["unknown"]
+
+    resolved_code = code if code is not None else -1
+    desc, emoji = get_wmo_info(resolved_code, lang)
+
+    try:
+        rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
+    except (ValueError, TypeError):
+        rain_prob_val = 0
+
+    wind_unit = "km/h" if lang == "en" else "км/ч"
+    wind_str = f"{round(wind, 1)} {wind_unit}" if wind is not None else f"-- {wind_unit}"
+    max_t_str = format_temperature(max_t, unit)
+    min_t_str = format_temperature(min_t, unit)
+
+    return (
+        "<div class='row-14'>"
+        f"<div class='day'>{label}</div>"
+        f"<div class='emoji'>{emoji}</div>"
+        f"<div class='desc'>{desc}</div>"
+        f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
+        f"<div class='rain'>💧 {rain_prob_val}%</div>"
+        f"<div class='wind'>💨 {wind_str}</div>"
+        "</div>"
+    )
+
+def generate_alert_html(icon: str, message: str) -> str:
+    """Generate the HTML for a single alert banner, matching the design's `.alert` chip."""
+    return f"<div class='alert'><span>{icon}</span><span class='text'>{message}</span></div>"
+
+def generate_hour_card_html(
+    date_str: str,
+    code: int | None,
+    rain_prob: float | int | str | None,
+    temp: float | None,
+    lang: str = "en",
+    unit: str = "C"
+) -> str:
+    """Generate the HTML for a single compact 24-hour strip card, matching the design's `.hour-card`."""
+    try:
+        label = format_date(date_str, "%H:00", lang)
+    except Exception:
+        label = TRANSLATIONS[lang]["unknown"]
+
+    resolved_code = code if code is not None else -1
+    _desc, emoji = get_wmo_info(resolved_code, lang)
+
+    try:
+        rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
+    except (ValueError, TypeError):
+        rain_prob_val = 0
+
+    temp_str = format_temperature(temp, unit)
+
+    return (
+        "<div class='hour-card'>"
+        f"<div class='time'>{label}</div>"
+        f"<div class='emoji'>{emoji}</div>"
+        f"<div class='temp'>{temp_str}</div>"
+        f"<div class='rain'>{rain_prob_val}%</div>"
+        "</div>"
+    )
+
+def generate_day_card_html(
+    date_str: str,
+    code: int | None,
+    rain_prob: float | int | str | None,
+    wind: float | None,
+    max_t: float | None,
+    min_t: float | None,
+    lang: str = "en",
+    unit: str = "C"
+) -> str:
+    """Generate the HTML for a single compact 7-day card, matching the design's `.day-card`."""
+    try:
+        label = format_date(date_str, "%a", lang)
+    except Exception:
+        label = TRANSLATIONS[lang]["unknown"]
+
+    resolved_code = code if code is not None else -1
+    desc, emoji = get_wmo_info(resolved_code, lang)
+
+    try:
+        rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
+    except (ValueError, TypeError):
+        rain_prob_val = 0
+
+    wind_val = round(wind) if wind is not None else "--"
+    max_t_str = format_temperature(max_t, unit)
+    min_t_str = format_temperature(min_t, unit)
+
+    return (
+        "<div class='day-card'>"
+        f"<div class='day'>{label}</div>"
+        f"<div class='emoji'>{emoji}</div>"
+        f"<div class='desc'>{desc}</div>"
+        f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
+        "<div class='meta'>"
+        f"<span>💧 {rain_prob_val}%</span>"
+        f"<span>💨 {wind_val}</span>"
+        "</div>"
+        "</div>"
+    )
+
+def get_theme_css(theme: dict[str, str]) -> str:
+    """Build the seasonal <link>+<style> block: CSS custom properties from the
+    season's palette (see SEASON_THEMES), plus the fixed component styling that
+    references them so switching seasons re-skins the whole app."""
+    return f"""
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {{
+    --page-bg: {theme['page_bg']};
+    --surface: {theme['surface']};
+    --border: {theme['border']};
+    --text: {theme['text']};
+    --accent: {theme['accent']};
+    --accent-deep: {theme['accent_deep']};
+    --accent-soft: {theme['accent_soft']};
+    --accent-grad: {theme['accent_grad']};
+    --hero-grad: {theme['hero_grad']};
+    --accent-shadow: {theme['accent_shadow']};
+    --card-shadow: {theme['card_shadow']};
+}}
+
+html, [data-testid="stAppViewContainer"], .stApp {{
+    background: var(--page-bg) !important;
+    font-family: 'Inter', system-ui, sans-serif;
+}}
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 {{
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    color: var(--text);
+}}
+/* Hides the top deploy bar completely */
+[data-testid="stHeader"] {{ visibility: hidden; display: none; }}
+
+/* ---------- BUTTONS ---------- */
+.stButton button[kind="primary"],
+[data-testid="stLinkButton"] a[kind="primary"] {{
+    background: var(--accent-grad) !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 3px 10px var(--accent-shadow) !important;
+}}
+.stButton button[kind="secondary"] {{
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    border-radius: 10px !important;
+    font-weight: 700 !important;
+}}
+
+/* ---------- TEXT INPUTS ---------- */
+[data-testid="stTextInput"] input {{
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    color: var(--text) !important;
+    min-height: 42px;
+}}
+[data-testid="stTextInput"] label p {{
+    font-weight: 700 !important;
+    opacity: .7;
+}}
+
+/* ---------- SEGMENTED CONTROLS (season swatches, EN/BG, degC/degF pills) ---------- */
+[data-testid="stSegmentedControl"] div[role="radiogroup"] {{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+}}
+[data-testid="stSegmentedControl"] label {{
+    border-radius: 7px !important;
+    border: none !important;
+    background: transparent !important;
+}}
+[data-testid="stSegmentedControl"] label p {{
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+}}
+[data-testid="stSegmentedControl"] label[aria-checked="true"],
+[data-testid="stSegmentedControl"] label:has(input:checked) {{
+    background: var(--accent-grad) !important;
+}}
+[data-testid="stSegmentedControl"] label[aria-checked="true"] p,
+[data-testid="stSegmentedControl"] label:has(input:checked) p {{
+    color: #fff !important;
+}}
+
+/* ---------- TABS ---------- */
+.stTabs [data-baseweb="tab-list"] {{
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+}}
+.stTabs [data-baseweb="tab"] {{
+    height: auto;
+    padding: 10px 18px;
+    background: transparent !important;
+}}
+.stTabs [data-baseweb="tab"] p {{
+    font-family: 'Manrope', sans-serif !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    opacity: .55;
+}}
+.stTabs [aria-selected="true"] p {{ opacity: 1; }}
+.stTabs [data-baseweb="tab-highlight"] {{ background-color: var(--accent-deep) !important; }}
+
+/* ---------- ALERTS ---------- */
+[data-testid="stAlert"] {{
+    border-radius: 12px !important;
+    font-weight: 600;
+}}
+.alert {{ display: flex; align-items: center; gap: 10px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 11px 16px; margin-bottom: 8px; }}
+.alert .text {{ font-size: 13.5px; font-weight: 600; color: var(--accent-deep); }}
+
+/* ---------- APP HEADER ---------- */
+.st-key-app_header {{ margin-bottom: 22px; }}
+.st-key-app_header [data-testid="stHorizontalBlock"] {{
+    align-items: center;
+}}
+.st-key-app_header [data-testid="stCaptionContainer"] {{
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    opacity: .5; color: var(--text); margin-top: 8px; white-space: nowrap;
+}}
+.st-key-app_header [data-testid="stSegmentedControl"] div[role="radiogroup"] {{
+    padding: 2px;
+}}
+.st-key-app_header [data-testid="stSegmentedControl"] label {{
+    padding: 4px 8px !important;
+}}
+.brand-row {{ display: flex; align-items: center; gap: 14px; }}
+.brand-icon {{
+    width: 44px; height: 44px; border-radius: 12px; background: var(--accent-grad);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    box-shadow: 0 4px 14px var(--accent-shadow); flex-shrink: 0;
+}}
+.brand-title {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 21px; letter-spacing: -.01em; color: var(--text); }}
+.brand-sub {{ font-size: 12.5px; opacity: .55; font-weight: 500; color: var(--text); }}
+
+/* ---------- SEARCH / LOCATION CARD ---------- */
+.st-key-location_card {{
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px var(--card-shadow);
+    padding: 20px 22px;
+}}
+.st-key-location_card [data-testid="stVerticalBlockBorderWrapper"] {{
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}}
+.st-key-search_top [data-testid="stHorizontalBlock"] {{
+    align-items: center;
+    gap: 14px;
+}}
+.st-key-search_top [data-testid="stCaptionContainer"] {{
+    font-size: 12.5px; font-weight: 400; opacity: .6; color: var(--text);
+    text-transform: none; letter-spacing: normal; white-space: nowrap;
+}}
+.st-key-search_top [data-testid="stCustomComponentV1"] {{
+    width: 38px !important; max-width: 38px !important; height: 38px; border-radius: 10px;
+    background: var(--accent-soft);
+    border: 1px solid var(--border); overflow: hidden;
+}}
+.location-divider {{ display: flex; align-items: center; gap: 12px; }}
+.location-divider-line {{ flex: 1; height: 1px; background: var(--border); }}
+.location-divider-text {{ font-size: .78rem; font-weight: 500; opacity: .55; white-space: nowrap; color: var(--text); }}
+.st-key-search_action .stButton button {{ margin-top: 27px; }}
+
+/* ---------- LOCATION LINE ---------- */
+.location {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }}
+.location .name {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 19px; color: var(--text); }}
+
+/* ---------- HERO PANEL ---------- */
+.hero {{
+    background: var(--hero-grad); border: 1px solid var(--border); border-radius: 18px;
+    padding: 26px 28px; box-shadow: 0 4px 20px var(--card-shadow); margin-bottom: 4px;
+    display: grid; grid-template-columns: minmax(220px,1fr) 2fr; gap: 24px; align-items: center;
+}}
+@media (max-width: 760px) {{ .hero {{ grid-template-columns: 1fr; }} }}
+.hero-main {{ display: flex; align-items: center; gap: 16px; }}
+.hero-emoji {{ font-size: 56px; line-height: 1; }}
+.hero-temp {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; color: var(--text); }}
+.hero-feels {{ font-size: 13px; opacity: .65; font-weight: 500; margin-top: 4px; color: var(--text); }}
+.hero-desc {{ font-size: 13.5px; font-weight: 700; color: var(--accent-deep); margin-top: 2px; }}
+.stat-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }}
+.stat-chip {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; }}
+.stat-chip .label {{ font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .5; margin-bottom: 4px; color: var(--text); }}
+.stat-chip .value {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 17px; color: var(--text); }}
+
+/* ---------- 24H STRIP ---------- */
+.hour-strip {{ display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }}
+.hour-card {{ min-width: 96px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
+.hour-card .time {{ font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; color: var(--text); }}
+.hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; }}
+.hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
+.hour-card .rain {{ font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 2px; color: var(--text); }}
+
+/* ---------- 7-DAY CARDS ---------- */
+.day-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }}
+.day-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; }}
+.day-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
+.day-card .day {{ font-size: 12.5px; font-weight: 700; margin-bottom: 6px; color: var(--text); }}
+.day-card .emoji {{ font-size: 32px; margin-bottom: 6px; }}
+.day-card .desc {{ font-size: 11.5px; font-weight: 600; color: var(--accent-deep); margin-bottom: 10px; min-height: 14px; }}
+.day-card .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
+.day-card .temps .min {{ opacity: .45; font-weight: 600; }}
+.day-card .meta {{ display: flex; justify-content: center; gap: 10px; font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; color: var(--text); }}
+.st-key-forecast_tab7 .stButton button {{
+    margin-top: 8px; height: 32px !important; min-height: 32px !important; font-size: 11.5px !important;
+}}
+
+/* ---------- CUSTOM FORECAST CARD ---------- */
+.forecast-card {{
+    text-align: center; padding: 16px 14px; border-radius: 14px;
+    border: 1px solid var(--border); background: var(--surface);
+    margin: 6px 0; box-shadow: 0 2px 10px var(--card-shadow);
+    transition: transform .15s ease, box-shadow .15s ease;
+}}
+.forecast-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
+.forecast-card.rain-bg {{ background: var(--accent-soft); }}
+.forecast-time {{ font-weight: 700; font-size: 1.05em; margin-bottom: 5px; color: var(--text); }}
+.forecast-emoji {{ font-size: 2.6em; line-height: 1.2; margin-bottom: 0; }}
+.forecast-desc {{ font-size: .95em; font-weight: 700; color: var(--accent-deep); margin-bottom: 10px; }}
+.forecast-desc.desc-thunderstorm {{ color: #b8860b; }}
+.forecast-desc.desc-hail {{ color: #b5432b; }}
+.temp-primary {{ font-size: 1.05em; font-weight: 700; color: var(--text); }}
+.temp-secondary {{ font-size: .82em; opacity: .7; color: var(--text); }}
+.temp-tertiary {{ font-size: .88em; font-weight: 600; opacity: .85; color: var(--text); }}
+.mt-small {{ margin-top: 8px; }}
+.mb-small {{ margin-bottom: 8px; }}
+.forecast-divider {{ margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }}
+.forecast-extra {{ font-size: .82em; opacity: .7; color: var(--text); }}
+.forecast-rain {{ font-size: .92em; font-weight: 600; margin-top: 8px; color: var(--text); }}
+.forecast-rain.high-prob {{ color: var(--accent-deep); }}
+
+/* ---------- 14-DAY COMPACT ROWS ---------- */
+.st-key-forecast_tab14 {{
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+}}
+.row-14 {{
+    display: grid; grid-template-columns: 110px 32px 1fr 90px 70px 80px; align-items: center;
+    gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border);
+}}
+.row-14 .day {{ font-size: 12.5px; font-weight: 700; color: var(--text); }}
+.row-14 .emoji {{ font-size: 20px; }}
+.row-14 .desc {{ font-size: 12.5px; font-weight: 600; opacity: .75; color: var(--text); }}
+.row-14 .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 13.5px; text-align: right; color: var(--text); }}
+.row-14 .temps .min {{ opacity: .45; font-weight: 600; }}
+.row-14 .rain, .row-14 .wind {{ font-size: 11.5px; opacity: .6; font-weight: 600; text-align: right; color: var(--text); }}
+.st-key-forecast_tab14 .stButton button {{
+    height: 32px !important; min-height: 32px !important; padding: 0 10px !important; font-size: 11.5px !important;
+}}
+
+/* ---------- RADAR ---------- */
+.radar-frame {{ border-radius: 14px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 16px var(--card-shadow); }}
+.radar-frame iframe {{ display: block; width: 100%; height: 560px; border: 0; }}
+</style>
+"""
 
 def main():
     if "lang" not in st.session_state:
         st.session_state.lang = "en"
-        
+    if "season" not in st.session_state:
+        st.session_state.season = "summer"
+    if "unit" not in st.session_state:
+        st.session_state.unit = "C"
+
     current_lang = st.session_state.lang
+    current_season = st.session_state.season
+    current_unit = st.session_state.unit
+
     page_title = "Weather App" if current_lang == "en" else "Приложение за времето"
     st.set_page_config(page_title=page_title, page_icon="🌤️", layout="wide")
-    
-    # All App CSS (including new classes for our forecast cards)
-    st.markdown("""
-    <style>
-    [data-testid="stMetricValue"] { font-size: 2.2rem !important; font-weight: 700; }
-    
-    /* Make Streamlit Tabs larger and wider */
-    .stTabs [data-baseweb="tab-list"] { gap: 20px; }
-    .stTabs [data-baseweb="tab"] { padding: 10px 24px; height: auto; }
-    .stTabs [data-baseweb="tab"] p { font-size: 1.4rem !important; font-weight: 700 !important; }
 
-    /* COMPLETE PANEL HIDE: Hides the top deploy bar completely */
-    [data-testid="stHeader"] { visibility: hidden; display: none; }
-    
-    /* --- CUSTOM FORECAST CARD CSS CLASSES --- */
-    .forecast-card {
-        text-align: center;
-        padding: 20px;
-        border-radius: 16px;
-        border: 1px solid var(--border-color, rgba(128,128,128,0.2));
-        margin: 6px;
-        box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
-    }
-    .forecast-card.rain-bg {
-        background-color: rgba(0, 180, 216, 0.1);
-    }
-    .forecast-time {
-        font-weight: 700;
-        font-size: 1.05em;
-        margin-bottom: 5px;
-        color: inherit;
-    }
-    .forecast-emoji {
-        font-size: 3.2em;
-        line-height: 1.2;
-        margin-bottom: 0px;
-    }
-    .forecast-desc {
-        font-size: 1em;
-        font-weight: 700;
-        color: #007BFF; /* Default Blue for standard weather */
-        margin-bottom: 12px;
-    }
-    
-    /* Dynamic Weather Text Colors */
-    .forecast-desc.desc-thunderstorm {
-        color: orange;
-    }
-    .forecast-desc.desc-hail {
-        color: red;
-    }
-    
-    .temp-primary {
-        font-size: 1.1em;
-        font-weight: 700;
-    }
-    .temp-secondary {
-        font-size: 0.85em;
-        opacity: 0.7;
-    }
-    .temp-tertiary {
-        font-size: 0.9em;
-        font-weight: 600;
-        opacity: 0.9;
-    }
-    .mt-small { margin-top: 8px; }
-    .mb-small { margin-bottom: 8px; }
-    
-    .forecast-divider {
-        margin-top: 10px;
-        border-top: 1px solid rgba(128,128,128,0.2);
-        padding-top: 8px;
-    }
-    .forecast-extra {
-        font-size: 0.85em;
-        opacity: 0.7;
-    }
-    .forecast-rain {
-        font-size: 0.95em;
-        font-weight: 600;
-        margin-top: 8px;
-    }
-    .forecast-rain.high-prob {
-        color: #00B4D8;
-    }
+    theme = SEASON_THEMES[current_season]
+    st.markdown(get_theme_css(theme), unsafe_allow_html=True)
 
-    /* --- APP HEADER (title + language selector) --- */
-    .st-key-app_header {
-        margin-bottom: 24px;
-    }
-    .st-key-app_header [data-testid="stMarkdownContainer"] h1 {
-        font-weight: 700;
-        letter-spacing: -0.01em;
-        margin-top: 0;
-    }
-    .st-key-app_header [data-testid="stSelectbox"] {
-        max-width: 220px;
-    }
-
-    /* --- LOCATION CARD (pre-fetch input section) ---
-       NOTE: Streamlit does not actually define --secondary-background-color /
-       --border-color as usable CSS custom properties in this version (verified:
-       they resolve to empty at every scope), so the var() calls below always fall
-       through to their literal fallback. Alpha values are tuned to be clearly
-       visible against both a white and a near-black page background.
-       The card is deliberately left without its own fill (border + shadow only):
-       Streamlit's text inputs already render with its real theme-aware secondary
-       background color, so giving the card a same-toned fill made the inputs
-       visually disappear into it instead of standing out as the main fields. */
-    .st-key-location_card {
-        border-radius: 16px;
-        border: 1px solid var(--border-color, rgba(128,128,128,0.35));
-        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-        padding: 24px;
-    }
-    /* Streamlit's border=True paints its own border/shadow directly on the inner
-       wrapper; !important overrides that inline styling so only the custom border
-       above is visible instead of two stacked borders. */
-    .st-key-location_card [data-testid="stVerticalBlockBorderWrapper"] {
-        border: none !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-    }
-    .st-key-location_card [data-testid="stTextInput"] label {
-        font-weight: 600;
-    }
-    .st-key-location_card [data-testid="stTextInput"] input {
-        border-radius: 8px;
-        min-height: 44px;
-    }
-
-    /* --- LOCATE CHIP (geolocation button + hints, nested in the location card) --- */
-    .st-key-locate_chip {
-        border-radius: 12px;
-        background: rgba(0, 180, 216, 0.06);
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-    .st-key-locate_chip [data-testid="stVerticalBlock"] {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .st-key-locate_chip [data-testid="stCaptionContainer"]:first-of-type {
-        font-size: 0.78rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-color, inherit);
-        opacity: 0.85;
-    }
-    .st-key-locate_chip [data-testid="stCaptionContainer"]:last-of-type {
-        font-size: 0.78rem;
-        font-weight: 400;
-        opacity: 0.6;
-    }
-    /* The streamlit_geolocation component's iframe defaults to filling the full
-       container width even though its actual button is a small square icon on a
-       white background we can't restyle (it's the third-party bundle's own
-       document). Rather than fight the white fill, cap the iframe to the icon's
-       own footprint and frame it deliberately as a small bordered icon button. */
-    .st-key-locate_chip [data-testid="stCustomComponentV1"] {
-        width: 40px !important;
-        max-width: 40px !important;
-        border-radius: 8px;
-        border: 1px solid rgba(128,128,128,0.3);
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }
-
-    /* --- MANUAL-ENTRY DIVIDER (replaces the plain "or enter manually" caption) ---
-       Built as line/text/line flex items rather than a background-matching mask,
-       so it never depends on knowing the exact page/card background color. */
-    .location-divider {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-block: 16px;
-    }
-    .location-divider-line {
-        flex: 1;
-        height: 1px;
-        background: var(--border-color, rgba(128,128,128,0.35));
-    }
-    .location-divider-text {
-        font-size: 0.78rem;
-        font-weight: 500;
-        opacity: 0.6;
-        white-space: nowrap;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Set the translation based on the current session state
     t = TRANSLATIONS[current_lang]
-    
-    # --- Main Page Header Layout ---
+
+    # --- Main Page Header Layout: brand + season swatches + EN/BG + degC/degF ---
     with st.container(key="app_header"):
-        header_col1, header_col2 = st.columns([4, 1])
+        col_brand, col_controls = st.columns([3, 3])
 
-        with header_col1:
-            st.title(t["app_title"])
-
-        with header_col2:
-            lang_opts = {"English": "en", "Български": "bg"}
-            # The label t["lang_label"] is now clearly visible above the box!
-            selected_lang_name = st.selectbox(
-                label=t["lang_label"],
-                options=list(lang_opts.keys()),
-                index=0 if current_lang == "en" else 1,
-                key="main_language_selector"
+        with col_brand:
+            brand_html = (
+                "<div class='brand-row'>"
+                f"<div class='brand-icon'>{theme['emoji']}</div>"
+                "<div>"
+                f"<div class='brand-title'>{t['brand_title']}</div>"
+                f"<div class='brand-sub'>{t['brand_sub']}</div>"
+                "</div>"
+                "</div>"
             )
-            lang = lang_opts[selected_lang_name]
-        
-        # If the user changes the language, update session state and restart the app
-        if lang != current_lang:
-            st.session_state.lang = lang
-            st.rerun()
+            st.markdown(brand_html, unsafe_allow_html=True)
 
+        with col_controls:
+            col_season_label, col_season_swatches, col_lang, col_unit = st.columns([1, 2, 1, 1])
+
+            with col_season_label:
+                st.caption(t["season_label"])
+
+            with col_season_swatches:
+                season_keys = list(SEASON_THEMES.keys())
+                selected_season = st.segmented_control(
+                    label=t["season_label"],
+                    options=season_keys,
+                    format_func=lambda key: SEASON_THEMES[key]["emoji"],
+                    default=current_season,
+                    required=True,
+                    key="season_selector",
+                    label_visibility="collapsed"
+                )
+
+            with col_lang:
+                lang_options = {"EN": "en", "BG": "bg"}
+                current_lang_label = "EN" if current_lang == "en" else "BG"
+                selected_lang_label = st.segmented_control(
+                    label=t["lang_label"],
+                    options=list(lang_options.keys()),
+                    default=current_lang_label,
+                    required=True,
+                    key="main_language_selector",
+                    label_visibility="collapsed"
+                )
+                selected_lang = lang_options.get(selected_lang_label, current_lang)
+
+            with col_unit:
+                unit_options = {"°C": "C", "°F": "F"}
+                current_unit_label = "°C" if current_unit == "C" else "°F"
+                selected_unit_label = st.segmented_control(
+                    label="Unit",
+                    options=list(unit_options.keys()),
+                    default=current_unit_label,
+                    required=True,
+                    key="unit_selector",
+                    label_visibility="collapsed"
+                )
+                selected_unit = unit_options.get(selected_unit_label, current_unit)
+
+    # If any control changed, persist it and rerun so the whole page reflects the new state
+    if selected_season != current_season:
+        st.session_state.season = selected_season
+        st.rerun()
+    if selected_lang != current_lang:
+        st.session_state.lang = selected_lang
+        st.rerun()
+    if selected_unit != current_unit:
+        st.session_state.unit = selected_unit
+        st.rerun()
+
+    lang = st.session_state.lang
+    unit = st.session_state.unit
     t = TRANSLATIONS[lang]
 
     # Initialize session states for specific day drill-down AND remembering user inputs
@@ -754,9 +1103,21 @@ def main():
 
     # Input Layout
     with st.container(key="location_card"):
-        with st.container(key="locate_chip"):
-            st.caption(t["geo_section_label"])
-            geo_result = streamlit_geolocation()
+        with st.container(key="search_top"):
+            col_geo_icon, col_geo_hint, col_geo_divider = st.columns([1, 3, 5])
+            with col_geo_icon:
+                geo_result = streamlit_geolocation()
+            with col_geo_hint:
+                st.caption(t["geo_section_label"])
+            with col_geo_divider:
+                st.markdown(
+                    '<div class="location-divider">'
+                    '<span class="location-divider-line"></span>'
+                    f'<span class="location-divider-text">{t["geo_divider_text"]}</span>'
+                    '<span class="location-divider-line"></span>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
 
             geo_lat = geo_result.get("latitude") if geo_result else None
             geo_lon = geo_result.get("longitude") if geo_result else None
@@ -787,18 +1148,7 @@ def main():
                         st.session_state.saved_country = ""
                     st.rerun()
 
-            st.caption(t["geo_permission_hint"])
-
-        st.markdown(
-            '<div class="location-divider">'
-            '<span class="location-divider-line"></span>'
-            f'<span class="location-divider-text">{t["geo_divider_text"]}</span>'
-            '<span class="location-divider-line"></span>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        c_in1, c_in2 = st.columns([1, 1])
+        c_in1, c_in2, c_in3 = st.columns([1, 1, 1])
 
         with c_in1:
             city_input = st.text_input(
@@ -812,6 +1162,12 @@ def main():
                 value=st.session_state.saved_country,
                 placeholder=t["country_placeholder"]
             )
+        with c_in3:
+            with st.container(key="search_action"):
+                # Streamlit already reruns (and refetches with the current inputs) on any
+                # widget interaction, so this button is a visual affordance matching the
+                # design rather than a gate the fetch logic below depends on.
+                st.button(t["search_button"], type="primary", use_container_width=True, key="search_button")
 
     # Automatically update our memory state with whatever is currently in the boxes
     # NOTE: geo_processed_coords is intentionally left untouched here. The geolocation
@@ -850,41 +1206,56 @@ def main():
             if location:
                 lat, lon = location["latitude"], location["longitude"]
                 f_data = get_weather_data(lat, lon)
-                
+
                 if f_data:
                     hourly = f_data.get("hourly", {})
                     daily = f_data.get("daily", {})
                     curr = f_data.get("current", {})
-                    
-                    # Compute Daily Average Humidity
-                    daily_hum_list = calculate_daily_average_humidity(hourly.get("relative_humidity_2m", []))
 
-                    # --- Main Screen Metrics ---
+                    # --- Main Screen Location + Hero ---
                     location_label = location["name"]
                     if location.get("country"):
                         location_label += f", {location['country']}"
-                    st.header(f"📍 {location_label}")
+                    st.markdown(
+                        f"<div class='location'><span>📍</span><span class='name'>{location_label}</span></div>",
+                        unsafe_allow_html=True
+                    )
 
                     if using_geo_location and not location.get("country"):
                         st.info(t["geo_reverse_lookup_failed"])
 
-                    m1, m2, m3, m4, m5, m6, m7 = st.columns(7)
-                    with m1:
-                        st.metric(t["current_temp"], f"{curr.get('temperature_2m', '--')}°C")
-                    with m2:
-                        st.metric(t["real_feel"], f"{curr.get('apparent_temperature', '--')}°C")
-                    with m3:
-                        st.metric(t["max_temp"], f"{safe_get(daily, 'temperature_2m_max', 0, '--')}°C")
-                    with m4:
-                        st.metric(t["min_temp"], f"{safe_get(daily, 'temperature_2m_min', 0, '--')}°C")
-                    with m5:
-                        wind_speed_val = curr.get('wind_speed_10m', '--')
-                        wind_unit = "km/h" if lang == "en" else "км/ч"
-                        st.metric(t["wind_speed"], f"{wind_speed_val} {wind_unit}")
-                    with m6:
-                        st.metric(t["humidity"], f"{curr.get('relative_humidity_2m', '--')}%")
-                    with m7:
-                        st.metric(t["rain_chance_today"], f"{safe_get(daily, 'precipitation_probability_max', 0, '--')}%")
+                    current_code = curr.get("weather_code")
+                    current_desc, current_emoji = get_wmo_info(
+                        current_code if current_code is not None else -1, lang
+                    )
+                    wind_unit = "km/h" if lang == "en" else "км/ч"
+                    wind_speed_val = curr.get("wind_speed_10m")
+                    wind_str = f"{wind_speed_val} {wind_unit}" if wind_speed_val is not None else f"-- {wind_unit}"
+                    humidity_val = curr.get("relative_humidity_2m")
+                    humidity_str = f"{humidity_val}%" if humidity_val is not None else "--%"
+                    rain_chance_val = safe_get(daily, "precipitation_probability_max", 0)
+                    rain_chance_str = f"{rain_chance_val}%" if rain_chance_val is not None else "--%"
+
+                    hero_html = (
+                        "<div class='hero'>"
+                        "<div class='hero-main'>"
+                        f"<div class='hero-emoji'>{current_emoji}</div>"
+                        "<div>"
+                        f"<div class='hero-temp'>{format_temperature(curr.get('temperature_2m'), unit)}</div>"
+                        f"<div class='hero-feels'>{t['card_feels_like']} {format_temperature(curr.get('apparent_temperature'), unit)}</div>"
+                        f"<div class='hero-desc'>{current_desc}</div>"
+                        "</div>"
+                        "</div>"
+                        "<div class='stat-grid'>"
+                        f"<div class='stat-chip'><div class='label'>{t['card_day_max']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_max', 0), unit)}</div></div>"
+                        f"<div class='stat-chip'><div class='label'>{t['card_day_min']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_min', 0), unit)}</div></div>"
+                        f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value'>{wind_str}</div></div>"
+                        f"<div class='stat-chip'><div class='label'>{t['card_hum']}</div><div class='value'>{humidity_str}</div></div>"
+                        f"<div class='stat-chip'><div class='label'>{t['card_rain_chance']}</div><div class='value'>{rain_chance_str}</div></div>"
+                        "</div>"
+                        "</div>"
+                    )
+                    st.markdown(hero_html, unsafe_allow_html=True)
 
                     st.divider()
 
@@ -892,19 +1263,19 @@ def main():
                     if daily and "time" in daily:
                         st.subheader(t["alerts_header"].format(city=location['name']))
                         alerts = get_weather_alerts(daily, lang=lang)
-                        
+
                         if alerts:
-                            for alert in alerts:
-                                if alert["type"] == "error":
-                                    st.error(alert["message"])
-                                else:
-                                    st.warning(alert["message"])
+                            alerts_html = "".join(generate_alert_html("⚠️", alert["message"]) for alert in alerts)
+                            st.markdown(alerts_html, unsafe_allow_html=True)
                         else:
-                            st.success(t["no_alerts"].format(city=location['name']))
-                    
+                            st.markdown(
+                                generate_alert_html("✅", t["no_alerts"].format(city=location['name'])),
+                                unsafe_allow_html=True
+                            )
+
                     st.divider()
 
-                    # --- Immediate 24h Hourly Track ---
+                    # --- Immediate 24h Hourly Track (horizontal scroll strip) ---
                     if hourly and "time" in hourly:
                         st.subheader(t["next_24h"])
 
@@ -931,54 +1302,38 @@ def main():
                         end_idx = min(start_idx + 24, len(hourly["time"]))
                         hour_indices = list(range(start_idx, end_idx))
 
-                        for i in range(0, len(hour_indices), 6):
-                            cols = st.columns(6)
-                            for j in range(6):
-                                if i + j < len(hour_indices):
-                                    idx = hour_indices[i + j]
-                                    day_str = hourly["time"][idx][:10]
-                                    try:
-                                        d_idx = daily["time"].index(day_str)
-                                        d_min = safe_get(daily, "temperature_2m_min", d_idx)
-                                        d_max = safe_get(daily, "temperature_2m_max", d_idx)
-                                    except ValueError:
-                                        d_min, d_max = None, None
-                                        
-                                    with cols[j]:
-                                        render_forecast_card(
-                                            hourly["time"][idx],
-                                            code=safe_get(hourly, "weather_code", idx),
-                                            rain_prob=safe_get(hourly, "precipitation_probability", idx),
-                                            wind=safe_get(hourly, "wind_speed_10m", idx),
-                                            humidity=safe_get(hourly, "relative_humidity_2m", idx),
-                                            max_t=d_max,
-                                            min_t=d_min,
-                                            hour_t=safe_get(hourly, "temperature_2m", idx),
-                                            hour_app=safe_get(hourly, "apparent_temperature", idx),
-                                            is_hourly=True,
-                                            lang=lang
-                                        )
+                        hour_cards_html = "".join(
+                            generate_hour_card_html(
+                                hourly["time"][idx],
+                                code=safe_get(hourly, "weather_code", idx),
+                                rain_prob=safe_get(hourly, "precipitation_probability", idx),
+                                temp=safe_get(hourly, "temperature_2m", idx),
+                                lang=lang,
+                                unit=unit
+                            )
+                            for idx in hour_indices
+                        )
+                        st.markdown(f"<div class='hour-strip'>{hour_cards_html}</div>", unsafe_allow_html=True)
                     else:
                         st.warning(t["hourly_unavailable"])
 
                     st.divider()
 
-                    # --- Helper function to display card + button ---
+                    # --- Helper function to display card + button (7-day tab) ---
                     def display_daily_column(st_col: DeltaGenerator, data_index: int, tab_prefix: str) -> None:
-                        hum_val = daily_hum_list[data_index] if data_index < len(daily_hum_list) else None
                         with st_col:
-                            render_forecast_card(
-                                daily["time"][data_index],
-                                code=safe_get(daily, "weather_code", data_index),
-                                rain_prob=safe_get(daily, "precipitation_probability_max", data_index),
-                                wind=safe_get(daily, "wind_speed_10m_max", data_index),
-                                humidity=hum_val,
-                                max_t=safe_get(daily, "temperature_2m_max", data_index),
-                                min_t=safe_get(daily, "temperature_2m_min", data_index),
-                                app_max=safe_get(daily, "apparent_temperature_max", data_index),
-                                app_min=safe_get(daily, "apparent_temperature_min", data_index),
-                                is_hourly=False,
-                                lang=lang
+                            st.markdown(
+                                generate_day_card_html(
+                                    daily["time"][data_index],
+                                    code=safe_get(daily, "weather_code", data_index),
+                                    rain_prob=safe_get(daily, "precipitation_probability_max", data_index),
+                                    wind=safe_get(daily, "wind_speed_10m_max", data_index),
+                                    max_t=safe_get(daily, "temperature_2m_max", data_index),
+                                    min_t=safe_get(daily, "temperature_2m_min", data_index),
+                                    lang=lang,
+                                    unit=unit
+                                ),
+                                unsafe_allow_html=True
                             )
                             # UNIQUE KEY: combining the tab name and the date to prevent duplicate key crashes
                             btn_key = f"btn_{tab_prefix}_{daily['time'][data_index]}"
@@ -989,34 +1344,53 @@ def main():
                     # --- Long Term Forecasts & Radar Tabs ---
                     if daily and "time" in daily:
                         tab7, tab14, tab_radar = st.tabs([t["forecast_7day"], t["forecast_14day"], t["live_radar"]])
-                        
+
                         with tab7:
-                            num_7 = min(7, len(daily["time"]))
-                            cols = st.columns(7)
-                            for i in range(num_7):
-                                display_daily_column(cols[i], i, "tab7")
-                        
-                        with tab14:
-                            num_14 = min(14, len(daily["time"]))
-                            for row in range((num_14 + 6) // 7):
+                            with st.container(key="forecast_tab7"):
+                                num_7 = min(7, len(daily["time"]))
                                 cols = st.columns(7)
-                                for col in range(7):
-                                    idx = row * 7 + col
-                                    if idx < num_14:
-                                        display_daily_column(cols[col], idx, "tab14")
-                                            
+                                for i in range(num_7):
+                                    display_daily_column(cols[i], i, "tab7")
+
+                        with tab14:
+                            with st.container(key="forecast_tab14"):
+                                num_14 = min(14, len(daily["time"]))
+                                for idx in range(num_14):
+                                    row_col, btn_col = st.columns([6, 1])
+                                    with row_col:
+                                        st.markdown(
+                                            generate_forecast_row_html(
+                                                daily["time"][idx],
+                                                code=safe_get(daily, "weather_code", idx),
+                                                rain_prob=safe_get(daily, "precipitation_probability_max", idx),
+                                                wind=safe_get(daily, "wind_speed_10m_max", idx),
+                                                max_t=safe_get(daily, "temperature_2m_max", idx),
+                                                min_t=safe_get(daily, "temperature_2m_min", idx),
+                                                lang=lang,
+                                                unit=unit
+                                            ),
+                                            unsafe_allow_html=True
+                                        )
+                                    with btn_col:
+                                        btn_key = f"btn_tab14_{daily['time'][idx]}"
+                                        if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
+                                            st.session_state.selected_date = daily["time"][idx]
+                                            st.rerun()
+
                         with tab_radar:
                             st.markdown("<br>", unsafe_allow_html=True)
-                            
+
                             # --- BIG REDIRECT BUTTON TO WINDY.COM ---
                             windy_redirect_url = f"https://www.windy.com/-Weather-radar-radar?radar,{lat},{lon},6"
                             st.link_button(t["open_windy"], url=windy_redirect_url, type="primary")
-                            
+
                             st.markdown("<br>", unsafe_allow_html=True)
-                            
+
                             # Keeps the embedded preview view visible just underneath
                             st.markdown(
-                                f"<iframe width='100%' height='600' src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0' style='border-radius: 12px; box-shadow: 2px 4px 12px rgba(0,0,0,0.1);'></iframe>", 
+                                "<div class='radar-frame'>"
+                                f"<iframe src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0'></iframe>"
+                                "</div>",
                                 unsafe_allow_html=True
                             )
 
@@ -1025,40 +1399,25 @@ def main():
                             st.divider()
                             sel_date = st.session_state.selected_date
                             formatted_sel_date = format_date(sel_date, "%A, %B %d", lang)
-                            
+
                             st.subheader(t["hourly_header"].format(formatted_date=formatted_sel_date))
-                            
+
                             # Find all hour indices that match the clicked date
                             day_indices = [idx for idx, time_str in enumerate(hourly.get("time", [])) if time_str.startswith(sel_date)]
-                            
+
                             if day_indices:
-                                for i in range(0, len(day_indices), 6):
-                                    cols = st.columns(6)
-                                    for j in range(6):
-                                        if i + j < len(day_indices):
-                                            idx = day_indices[i + j]
-                                            
-                                            try:
-                                                d_idx = daily["time"].index(sel_date)
-                                                d_min = safe_get(daily, "temperature_2m_min", d_idx)
-                                                d_max = safe_get(daily, "temperature_2m_max", d_idx)
-                                            except ValueError:
-                                                d_min, d_max = None, None
-                                                
-                                            with cols[j]:
-                                                render_forecast_card(
-                                                    hourly["time"][idx],
-                                                    code=safe_get(hourly, "weather_code", idx),
-                                                    rain_prob=safe_get(hourly, "precipitation_probability", idx),
-                                                    wind=safe_get(hourly, "wind_speed_10m", idx),
-                                                    humidity=safe_get(hourly, "relative_humidity_2m", idx),
-                                                    max_t=d_max,
-                                                    min_t=d_min,
-                                                    hour_t=safe_get(hourly, "temperature_2m", idx),
-                                                    hour_app=safe_get(hourly, "apparent_temperature", idx),
-                                                    is_hourly=True,
-                                                    lang=lang
-                                                )
+                                day_cards_html = "".join(
+                                    generate_hour_card_html(
+                                        hourly["time"][idx],
+                                        code=safe_get(hourly, "weather_code", idx),
+                                        rain_prob=safe_get(hourly, "precipitation_probability", idx),
+                                        temp=safe_get(hourly, "temperature_2m", idx),
+                                        lang=lang,
+                                        unit=unit
+                                    )
+                                    for idx in day_indices
+                                )
+                                st.markdown(f"<div class='hour-strip'>{day_cards_html}</div>", unsafe_allow_html=True)
                             else:
                                 st.info(t["hourly_far_future"])
 

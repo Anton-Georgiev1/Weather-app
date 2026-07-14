@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Seasonal Themes — Weather Dashboard</title>
+<style>
+/* ============================================================
+   SEASONAL THEMES ONLY — 4 palettes as CSS variables.
+   Apply one class to <body>: theme-spring | theme-summer |
+   theme-autumn | theme-winter
+   ============================================================ */
+
+.theme-spring {
+  --page-bg: linear-gradient(160deg, #f2f7f0, #f7eef3); /* soft green → pink blossom */
+  --surface: #fcfdfb;        /* card background */
+  --border: #d7ddd4;         /* card/input borders */
+  --text: #2b332c;           /* main text */
+  --accent: #4d9e5f;         /* fresh green */
+  --accent-deep: #35804a;    /* darker green — headings, active tab, links */
+  --accent-soft: #e2f0e2;    /* pale green — alert bg, hover, chips */
+  --accent-grad: linear-gradient(135deg, #4d9e5f, #c47a9a); /* green → blossom pink, buttons */
+  --hero-grad: linear-gradient(135deg, #e7f2e5, #f4ecf1);   /* hero/current-weather panel */
+  --accent-shadow: rgba(77,158,95,.30);  /* button glow */
+  --card-shadow: rgba(40,50,42,.08);     /* card drop shadow */
+}
+
+.theme-summer {
+  --page-bg: linear-gradient(160deg, #f7f3e6, #e9f0f7); /* warm sand → sky blue */
+  --surface: #fdfcf6;
+  --border: #ddd6c2;
+  --text: #29303b;
+  --accent: #e0a83b;         /* sun gold */
+  --accent-deep: #b06c22;    /* amber */
+  --accent-soft: #f5ecd2;    /* pale gold */
+  --accent-grad: linear-gradient(135deg, #e0a83b, #4c8fc9); /* gold → sea blue */
+  --hero-grad: linear-gradient(135deg, #f5eccd, #e6eef6);
+  --accent-shadow: rgba(210,140,50,.32);
+  --card-shadow: rgba(40,48,60,.08);
+}
+
+.theme-autumn {
+  --page-bg: linear-gradient(160deg, #f5efe4, #f0e4dd); /* wheat → rust haze */
+  --surface: #fbf7ef;
+  --border: #d9cbb8;
+  --text: #342c25;
+  --accent: #c26a2e;         /* pumpkin orange */
+  --accent-deep: #9c5324;    /* rust brown */
+  --accent-soft: #f0e0cd;    /* pale amber */
+  --accent-grad: linear-gradient(135deg, #c26a2e, #8a5a44); /* orange → chestnut */
+  --hero-grad: linear-gradient(135deg, #f1e4cf, #ecdfd4);
+  --accent-shadow: rgba(190,105,45,.32);
+  --card-shadow: rgba(50,40,32,.09);
+}
+
+.theme-winter {
+  --page-bg: linear-gradient(160deg, #f2f4f7, #eef0f5); /* frost white → pale slate */
+  --surface: #fbfcfd;
+  --border: #d5dae2;
+  --text: #2b323d;
+  --accent: #5d94bd;         /* ice blue */
+  --accent-deep: #3b6d94;    /* deep steel blue */
+  --accent-soft: #e5ecf1;    /* frost */
+  --accent-grad: linear-gradient(135deg, #5d94bd, #b9c2cd); /* ice blue → silver */
+  --hero-grad: linear-gradient(135deg, #e8eef3, #ebeef3);
+  --accent-shadow: rgba(93,148,189,.30);
+  --card-shadow: rgba(43,50,61,.08);
+}
+
+/* ---- preview swatches (delete in production) ---- */
+body { margin: 0; font-family: system-ui, sans-serif; display: grid; grid-template-columns: 1fr 1fr; }
+.demo { padding: 40px; min-height: 50vh; background: var(--page-bg); color: var(--text); }
+.demo h2 { margin: 0 0 16px; color: var(--accent-deep); }
+.demo .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px var(--card-shadow); }
+.demo .btn { display: inline-block; padding: 10px 20px; border-radius: 10px; background: var(--accent-grad); color: #fff; font-weight: 700; font-size: 13px; box-shadow: 0 3px 10px var(--accent-shadow); }
+.demo .chip { display: inline-block; padding: 6px 12px; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--border); font-size: 12px; font-weight: 600; margin-right: 6px; }
+</style>
+</head>
+<body>
+  <div class="demo theme-spring"><h2>🌸 Spring</h2><div class="card">Card surface</div><span class="chip">accent-soft chip</span><a class="btn">Accent button</a></div>
+  <div class="demo theme-summer"><h2>☀️ Summer</h2><div class="card">Card surface</div><span class="chip">accent-soft chip</span><a class="btn">Accent button</a></div>
+  <div class="demo theme-autumn"><h2>🍂 Autumn</h2><div class="card">Card surface</div><span class="chip">accent-soft chip</span><a class="btn">Accent button</a></div>
+  <div class="demo theme-winter"><h2>❄️ Winter</h2><div class="card">Card surface</div><span class="chip">accent-soft chip</span><a class="btn">Accent button</a></div>
+</body>
+</html>
