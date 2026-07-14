@@ -184,9 +184,45 @@ def test_get_coordinates_with_country(httpx_mock):
     assert "Paris" in str(request.url)
     assert "France" in str(request.url)
 
-def test_get_coordinates_not_found(httpx_mock):
-    """Test behavior when a city is not found."""
+def test_get_coordinates_falls_back_to_other_language(httpx_mock):
+    """A Cyrillic city name isn't matched under language=en, but is under language=bg;
+    the default-language (en) search should fall back and still find it."""
     httpx_mock.add_response(json={"results": []})
+    httpx_mock.add_response(json={
+        "results": [
+            {"name": "Ямбол", "latitude": 42.4833, "longitude": 26.5, "country": "Bulgaria"}
+        ]
+    })
+
+    result = get_coordinates("Ямбол")
+    assert result is not None
+    assert result["name"] == "Ямбол"
+
+    requests = httpx_mock.get_requests()
+    assert len(requests) == 2
+    assert "language=en" in str(requests[0].url)
+    assert "language=bg" in str(requests[1].url)
+
+def test_get_coordinates_uses_current_ui_language_first(httpx_mock):
+    """When the UI is already in Bulgarian, the Bulgarian-language search should be
+    tried first rather than only as a fallback."""
+    mock_response = {
+        "results": [
+            {"name": "Ямбол", "latitude": 42.4833, "longitude": 26.5, "country": "Bulgaria"}
+        ]
+    }
+    httpx_mock.add_response(json=mock_response)
+
+    result = get_coordinates("Ямбол", lang="bg")
+    assert result is not None
+
+    request = httpx_mock.get_request()
+    assert request is not None
+    assert "language=bg" in str(request.url)
+
+def test_get_coordinates_not_found(httpx_mock):
+    """Test behavior when a city is not found in any of the retried languages."""
+    httpx_mock.add_response(json={"results": []}, is_reusable=True)
     result = get_coordinates("InvalidCity")
     assert result is None
 
@@ -196,8 +232,8 @@ def test_get_coordinates_empty_input():
     assert get_coordinates("   ") is None
 
 def test_get_coordinates_exception(httpx_mock):
-    """Test that function handles timeouts and network crashes gracefully."""
-    httpx_mock.add_exception(httpx.TimeoutException("Timeout"))
+    """Test that function handles timeouts and network crashes gracefully across retries."""
+    httpx_mock.add_exception(httpx.TimeoutException("Timeout"), is_reusable=True)
     result = get_coordinates("AnyCity")
     assert result is None
 

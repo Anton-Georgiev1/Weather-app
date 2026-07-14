@@ -321,18 +321,27 @@ def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any 
         return arr[idx]  # pyright: ignore[reportUnknownVariableType]
     return default
 
-def get_coordinates(city: str, country: str | None = None) -> dict[str, Any] | None:
+def get_coordinates(city: str, country: str | None = None, lang: str = "en") -> dict[str, Any] | None:
     query = city.strip()
     if not query: return None
     if country and country.strip(): query += f", {country.strip()}"
-    params: dict[str, Any] = {"name": query, "count": 1, "language": "en", "format": "json"}
-    try:
-        response = httpx.get(GEOCODING_API_URL, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data["results"][0] if "results" in data and data["results"] else None
-    except Exception:
-        return None
+
+    # The geocoding API's "language" param doesn't just pick the display language of
+    # results, it also restricts which name variants get matched at all (e.g. a
+    # Cyrillic query only matches under language=bg, never under language=en). Try
+    # the current UI language first, then fall back to the other supported language,
+    # so a city can be found no matter which script/language it was typed in.
+    for search_lang in dict.fromkeys([lang, "bg", "en"]):
+        params: dict[str, Any] = {"name": query, "count": 1, "language": search_lang, "format": "json"}
+        try:
+            response = httpx.get(GEOCODING_API_URL, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if "results" in data and data["results"]:
+                return data["results"][0]
+        except Exception:
+            continue
+    return None
 
 def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict[str, str] | None:
     """Resolve a display name and country for coordinates via OpenStreetMap Nominatim."""
@@ -831,7 +840,7 @@ def main():
         with st.spinner(t["fetching"]):
             location = (
                 st.session_state.geo_location if using_geo_location
-                else get_coordinates(city_input, country_input)
+                else get_coordinates(city_input, country_input, lang=lang)
             )
 
             if location:
