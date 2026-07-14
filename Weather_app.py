@@ -263,7 +263,6 @@ TRANSLATIONS = {
         "humidity": "Humidity",
         "rain_chance_today": "Rain Chance Today",
         "alerts_header": "⚠️ Weather Alerts for {city}",
-        "no_alerts": "No severe storms or high wind alerts detected for {city} over the next 14 days.",
         "alert_precip": "<strong>Alert for {day_name}:</strong> {condition_name} expected! (<strong>{prob}%</strong> chance of precipitation)",
         "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind} km/h</strong>.",
         "next_24h": "Immediate Next 24 Hours",
@@ -325,7 +324,6 @@ TRANSLATIONS = {
         "humidity": "Влажност",
         "rain_chance_today": "Шанс за дъжд днес",
         "alerts_header": "⚠️ Сигнали за времето за {city}",
-        "no_alerts": "Не са засечени сигнали за силни бури или силен вятър за {city} през следващите 14 дни.",
         "alert_precip": "<strong>Сигнал за {day_name}:</strong> Очаква се {condition_name}! (<strong>{prob}%</strong> шанс за валежи)",
         "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind} км/ч</strong>.",
         "next_24h": "Следващите 24 часа",
@@ -518,13 +516,16 @@ def calculate_daily_average_humidity(hourly_hum_data: list[float | None]) -> lis
         daily_hum_list.append(sum(chunk) / len(chunk) if chunk else None)
     return daily_hum_list
 
+ALERT_LOOKAHEAD_DAYS = 3
+
 def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en") -> list[dict[str, Any]]:
-    """Analyze daily data for severe weather or wind alerts."""
+    """Analyze daily data for severe weather or wind alerts, limited to the near term
+    (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting."""
     alerts: list[dict[str, Any]] = []
     if not daily_data or "time" not in daily_data:
         return alerts
 
-    for i in range(len(daily_data["time"])):
+    for i in range(min(len(daily_data["time"]), ALERT_LOOKAHEAD_DAYS)):
         wcode = safe_get(daily_data, "weather_code", i)
         prob = safe_get(daily_data, "precipitation_probability_max", i, 0)
         wind = safe_get(daily_data, "wind_speed_10m_max", i, 0)
@@ -1282,21 +1283,13 @@ def main():
                     )
                     st.markdown(hero_html, unsafe_allow_html=True)
 
-                    st.divider()
-
-                    # --- Alerts Section ---
-                    if daily and "time" in daily:
+                    # --- Alerts Section (only shown when there's an actual alert) ---
+                    alerts = get_weather_alerts(daily, lang=lang) if daily and "time" in daily else []
+                    if alerts:
+                        st.divider()
                         st.subheader(t["alerts_header"].format(city=location['name']))
-                        alerts = get_weather_alerts(daily, lang=lang)
-
-                        if alerts:
-                            alerts_html = "".join(generate_alert_html("⚠️", alert["message"]) for alert in alerts)
-                            st.markdown(alerts_html, unsafe_allow_html=True)
-                        else:
-                            st.markdown(
-                                generate_alert_html("✅", t["no_alerts"].format(city=location['name'])),
-                                unsafe_allow_html=True
-                            )
+                        alerts_html = "".join(generate_alert_html("⚠️", alert["message"]) for alert in alerts)
+                        st.markdown(alerts_html, unsafe_allow_html=True)
 
                     st.divider()
 
