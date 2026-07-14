@@ -1,5 +1,6 @@
 streamlit
 streamlit-geolocation
+streamlit-local-storage
 httpx
 pandas
 pandas-stubs

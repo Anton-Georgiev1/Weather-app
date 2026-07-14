@@ -5,12 +5,15 @@ from streamlit.delta_generator import DeltaGenerator
 import httpx
 import pandas as pd
 from streamlit_geolocation import streamlit_geolocation  # pyright: ignore[reportMissingTypeStubs]
+from streamlit_local_storage import LocalStorage  # pyright: ignore[reportMissingTypeStubs]
 
 # --- Configuration ---
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 REVERSE_GEOCODING_API_URL = "https://nominatim.openstreetmap.org/reverse"
 REVERSE_GEOCODING_USER_AGENT = "WeatherAppStreamlit/1.0 (+https://github.com/Anton-Georgiev1/Weather-app)"
+LAST_CITY_STORAGE_KEY = "last_city"
+LAST_COUNTRY_STORAGE_KEY = "last_country"
 
 # Seasonal color palettes, ported from seasonal-themes.html. Each value is injected
 # as a CSS custom property so the same stylesheet can re-skin the whole app per season.
@@ -468,6 +471,24 @@ def build_location_from_coordinates(lat: float, lon: float, lang: str = "en") ->
     if resolved:
         return {"name": resolved["name"], "country": resolved["country"], "latitude": lat, "longitude": lon}
     return {"name": TRANSLATIONS[lang]["geo_header_generic"], "country": "", "latitude": lat, "longitude": lon}
+
+def load_last_location(local_storage: LocalStorage) -> dict[str, str]:
+    """Read the last used city/country from the browser's local storage so the search
+    fields can be pre-filled on startup. Local storage (not a server-side file) is used
+    because this app is hosted for multiple visitors, and each browser must only see its
+    own last-used location, not one shared across every visitor."""
+    city = local_storage.getItem(LAST_CITY_STORAGE_KEY)
+    country = local_storage.getItem(LAST_COUNTRY_STORAGE_KEY)
+    return {"city": city or "", "country": country or ""}
+
+def save_last_location(local_storage: LocalStorage, city: str, country: str) -> None:
+    """Persist the last used city/country to the browser's local storage so it survives
+    app restarts and reloads. Empty values are left untouched rather than overwriting a
+    previously remembered location."""
+    if city:
+        local_storage.setItem(LAST_CITY_STORAGE_KEY, city, key="set_last_city")
+    if country:
+        local_storage.setItem(LAST_COUNTRY_STORAGE_KEY, country, key="set_last_country")
 
 def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
     f_params: dict[str, Any] = {
@@ -1088,12 +1109,13 @@ def main():
     t = TRANSLATIONS[lang]
 
     # Initialize session states for specific day drill-down AND remembering user inputs
+    local_storage = LocalStorage()
     if "selected_date" not in st.session_state:
         st.session_state.selected_date = None
-    if "saved_city" not in st.session_state:
-        st.session_state.saved_city = ""
-    if "saved_country" not in st.session_state:
-        st.session_state.saved_country = ""
+    if "saved_city" not in st.session_state or "saved_country" not in st.session_state:
+        last_location = load_last_location(local_storage)
+        st.session_state.saved_city = last_location["city"]
+        st.session_state.saved_country = last_location["country"]
     if "location_source" not in st.session_state:
         st.session_state.location_source = "manual"
     if "geo_location" not in st.session_state:
@@ -1140,6 +1162,7 @@ def main():
                     if resolved_location["country"]:
                         st.session_state.saved_city = resolved_location["name"]
                         st.session_state.saved_country = resolved_location["country"]
+                        save_last_location(local_storage, resolved_location["name"], resolved_location["country"])
                         st.toast(t["geo_success_toast"].format(
                             city=resolved_location["name"], country=resolved_location["country"]
                         ))
@@ -1180,11 +1203,13 @@ def main():
         st.session_state.selected_date = None  # Clear selected day when user searches for a new city
         st.session_state.location_source = "manual"
         st.session_state.geo_location = None
+        save_last_location(local_storage, st.session_state.saved_city, st.session_state.saved_country)
 
     if country_input != st.session_state.saved_country:
         st.session_state.saved_country = country_input
         st.session_state.location_source = "manual"
         st.session_state.geo_location = None
+        save_last_location(local_storage, st.session_state.saved_city, st.session_state.saved_country)
 
     # Main Weather Fetching Section
     using_geo_location = (
