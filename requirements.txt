@@ -2,5 +2,6 @@ streamlit
 streamlit-geolocation
 httpx
 pandas
+pandas-stubs
 pytest
 pytest-httpx

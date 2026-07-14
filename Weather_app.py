@@ -1,7 +1,10 @@
+from typing import Any
+
 import streamlit as st
+from streamlit.delta_generator import DeltaGenerator
 import httpx
 import pandas as pd
-from streamlit_geolocation import streamlit_geolocation
+from streamlit_geolocation import streamlit_geolocation  # pyright: ignore[reportMissingTypeStubs]
 
 # --- Configuration ---
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -274,9 +277,11 @@ TRANSLATIONS = {
     }
 }
 
-def format_date(date_input, format_str: str, lang: str) -> str:
+def format_date(date_input: str, format_str: str, lang: str) -> str:
     try:
-        dt = pd.to_datetime(date_input)
+        # pandas-stubs' to_datetime overloads reference an internal Unknown-typed
+        # parameter; the resolved return type here is still the correct Timestamp.
+        dt = pd.to_datetime(date_input)  # pyright: ignore[reportUnknownMemberType]
     except Exception:
         return str(date_input)
         
@@ -294,7 +299,7 @@ def format_date(date_input, format_str: str, lang: str) -> str:
             
     return dt.strftime(format_str)
 
-def get_wmo_info(code, lang="en"):
+def get_wmo_info(code: int, lang: str = "en") -> tuple[str, str]:
     code_data = WMO_CODES.get(code)
     if code_data and lang in code_data:
         return code_data[lang]
@@ -304,16 +309,19 @@ def get_wmo_info(code, lang="en"):
     default_desc = "Unknown" if lang == "en" else "Неизвестно"
     return (default_desc, "❓")
 
-def safe_get(data_dict, key, idx, default=None):
+def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any = None) -> Any:
     """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
     if not isinstance(data_dict, dict):
         return default
-    arr = data_dict.get(key, [])
-    if isinstance(arr, list) and idx < len(arr) and arr[idx] is not None:
-        return arr[idx]
+    arr: Any = data_dict.get(key, [])
+    # isinstance narrowing against a bare "list" (no element type available here)
+    # resolves to list[Unknown] rather than list[Any]; the values are genuinely
+    # untyped JSON data, so this is a stub-precision limit, not a real bug.
+    if isinstance(arr, list) and idx < len(arr) and arr[idx] is not None:  # pyright: ignore[reportUnknownArgumentType]
+        return arr[idx]  # pyright: ignore[reportUnknownVariableType]
     return default
 
-def get_coordinates(city: str, country: str | None = None) -> dict | None:
+def get_coordinates(city: str, country: str | None = None) -> dict[str, Any] | None:
     query = city.strip()
     if not query: return None
     if country and country.strip(): query += f", {country.strip()}"
@@ -326,7 +334,7 @@ def get_coordinates(city: str, country: str | None = None) -> dict | None:
     except Exception:
         return None
 
-def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict | None:
+def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict[str, str] | None:
     """Resolve a display name and country for coordinates via OpenStreetMap Nominatim."""
     params = {"lat": lat, "lon": lon, "format": "jsonv2", "accept-language": lang}
     headers = {"User-Agent": REVERSE_GEOCODING_USER_AGENT}
@@ -343,14 +351,14 @@ def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict | None:
     except Exception:
         return None
 
-def build_location_from_coordinates(lat: float, lon: float, lang: str = "en") -> dict:
+def build_location_from_coordinates(lat: float, lon: float, lang: str = "en") -> dict[str, Any]:
     """Build a location dict (matching get_coordinates' shape) directly from browser-provided coordinates."""
     resolved = reverse_geocode(lat, lon, lang)
     if resolved:
         return {"name": resolved["name"], "country": resolved["country"], "latitude": lat, "longitude": lon}
     return {"name": TRANSLATIONS[lang]["geo_header_generic"], "country": "", "latitude": lat, "longitude": lon}
 
-def get_weather_data(lat: float, lon: float):
+def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
     f_params = {
         "latitude": lat,
         "longitude": lon,
@@ -370,7 +378,7 @@ def get_weather_data(lat: float, lon: float):
 
 def calculate_daily_average_humidity(hourly_hum_data: list[float | None]) -> list[float | None]:
     """Calculate daily average humidity from hourly data (24-hour chunks)."""
-    daily_hum_list = []
+    daily_hum_list: list[float | None] = []
     if not hourly_hum_data:
         return []
     for i in range(0, len(hourly_hum_data), 24):
@@ -378,9 +386,9 @@ def calculate_daily_average_humidity(hourly_hum_data: list[float | None]) -> lis
         daily_hum_list.append(sum(chunk) / len(chunk) if chunk else None)
     return daily_hum_list
 
-def get_weather_alerts(daily_data: dict, lang: str = "en") -> list[dict]:
+def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en") -> list[dict[str, Any]]:
     """Analyze daily data for severe weather or wind alerts."""
-    alerts = []
+    alerts: list[dict[str, Any]] = []
     if not daily_data or "time" not in daily_data:
         return alerts
     
@@ -406,26 +414,38 @@ def get_weather_alerts(daily_data: dict, lang: str = "en") -> list[dict]:
             })
     return alerts
 
-def generate_forecast_card_html(date_str, code, rain_prob, wind=None, humidity=None, 
-                               max_t=None, min_t=None, app_max=None, app_min=None, 
-                               hour_t=None, hour_app=None, is_hourly=False, lang="en") -> str:
+def generate_forecast_card_html(
+    date_str: str,
+    code: int | None,
+    rain_prob: float | int | str | None,
+    wind: float | None = None,
+    humidity: float | None = None,
+    max_t: float | None = None,
+    min_t: float | None = None,
+    app_max: float | None = None,
+    app_min: float | None = None,
+    hour_t: float | None = None,
+    hour_app: float | None = None,
+    is_hourly: bool = False,
+    lang: str = "en"
+) -> str:
     """Generate the HTML for a forecast card."""
     try:
         label = format_date(date_str, "%H:00" if is_hourly else "%A, %d %b", lang)
     except Exception:
         label = TRANSLATIONS[lang]["unknown"]
-    
-    code = code if code is not None else -1
-    desc, emoji = get_wmo_info(code, lang)
+
+    resolved_code = code if code is not None else -1
+    desc, emoji = get_wmo_info(resolved_code, lang)
     
     desc_class = ""
-    if code == 96:
+    if resolved_code == 96:
         desc_class = "desc-hail"
-    elif code in [95, 99]:
+    elif resolved_code in [95, 99]:
         desc_class = "desc-thunderstorm"
 
     try:
-        rain_prob_val = int(rain_prob)
+        rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
     except (ValueError, TypeError):
         rain_prob_val = 0
         
@@ -473,7 +493,7 @@ def generate_forecast_card_html(date_str, code, rain_prob, wind=None, humidity=N
         f"</div>"
     )
 
-def render_forecast_card(*args, **kwargs):
+def render_forecast_card(*args: Any, **kwargs: Any) -> None:
     html_content = generate_forecast_card_html(*args, **kwargs)
     st.markdown(html_content, unsafe_allow_html=True)
 
@@ -803,8 +823,9 @@ def main():
     )
 
     # The generic fallback name is language-dependent; keep it in sync with the current UI language.
-    if using_geo_location and not st.session_state.geo_location.get("country"):
-        st.session_state.geo_location["name"] = t["geo_header_generic"]
+    active_geo_location = st.session_state.geo_location
+    if using_geo_location and active_geo_location is not None and not active_geo_location.get("country"):
+        active_geo_location["name"] = t["geo_header_generic"]
 
     if using_geo_location or city_input:
         with st.spinner(t["fetching"]):
@@ -905,7 +926,7 @@ def main():
                     st.divider()
 
                     # --- Helper function to display card + button ---
-                    def display_daily_column(st_col, data_index, tab_prefix):
+                    def display_daily_column(st_col: DeltaGenerator, data_index: int, tab_prefix: str) -> None:
                         hum_val = daily_hum_list[data_index] if data_index < len(daily_hum_list) else None
                         with st_col:
                             render_forecast_card(
