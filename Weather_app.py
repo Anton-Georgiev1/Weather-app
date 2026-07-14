@@ -325,7 +325,7 @@ def get_coordinates(city: str, country: str | None = None) -> dict[str, Any] | N
     query = city.strip()
     if not query: return None
     if country and country.strip(): query += f", {country.strip()}"
-    params = {"name": query, "count": 1, "language": "en", "format": "json"}
+    params: dict[str, Any] = {"name": query, "count": 1, "language": "en", "format": "json"}
     try:
         response = httpx.get(GEOCODING_API_URL, params=params, timeout=10)
         response.raise_for_status()
@@ -336,7 +336,7 @@ def get_coordinates(city: str, country: str | None = None) -> dict[str, Any] | N
 
 def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict[str, str] | None:
     """Resolve a display name and country for coordinates via OpenStreetMap Nominatim."""
-    params = {"lat": lat, "lon": lon, "format": "jsonv2", "accept-language": lang}
+    params: dict[str, Any] = {"lat": lat, "lon": lon, "format": "jsonv2", "accept-language": lang}
     headers = {"User-Agent": REVERSE_GEOCODING_USER_AGENT}
     try:
         response = httpx.get(REVERSE_GEOCODING_API_URL, params=params, headers=headers, timeout=10)
@@ -359,7 +359,7 @@ def build_location_from_coordinates(lat: float, lon: float, lang: str = "en") ->
     return {"name": TRANSLATIONS[lang]["geo_header_generic"], "country": "", "latitude": lat, "longitude": lon}
 
 def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
-    f_params = {
+    f_params: dict[str, Any] = {
         "latitude": lat,
         "longitude": lon,
         "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m",
