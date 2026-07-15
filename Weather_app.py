@@ -12,6 +12,7 @@ GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
 WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
 REVERSE_GEOCODING_API_URL = "https://nominatim.openstreetmap.org/reverse"
 REVERSE_GEOCODING_USER_AGENT = "WeatherAppStreamlit/1.0 (+https://github.com/Anton-Georgiev1/Weather-app)"
+SKYWATCH_URL = "https://skywatchbg.vercel.app/"
 LAST_CITY_STORAGE_KEY = "last_city"
 LAST_COUNTRY_STORAGE_KEY = "last_country"
 LAST_LANG_STORAGE_KEY = "last_lang"
@@ -272,6 +273,7 @@ TRANSLATIONS = {
         "forecast_7day": "7-Day Forecast",
         "forecast_14day": "14-Day Forecast",
         "live_radar": "Live Radar Nowcast 📡",
+        "skywatch_tab": "SkyWatch BG ⚡",
         "btn_24h": "🕐 24h View",
         "hourly_header": "Specific Hourly Forecast for {formatted_date}",
         "hourly_far_future": "Hourly breakdown data is not available this far in the future.",
@@ -282,6 +284,7 @@ TRANSLATIONS = {
         # New Translations Added!
         "lang_label": "Language",
         "open_windy": "🌍 Open Full Radar on Windy.com",
+        "open_skywatch": "🌍 Open SkyWatch BG in a New Tab",
 
         # Card strings
         "card_current_temp": "Current Temp",
@@ -333,6 +336,7 @@ TRANSLATIONS = {
         "forecast_7day": "7-дневна прогноза",
         "forecast_14day": "14-дневна прогноза",
         "live_radar": "Радар на живо 📡",
+        "skywatch_tab": "SkyWatch BG ⚡",
         "btn_24h": "🕐 24ч преглед",
         "hourly_header": "Подробна часова прогноза за {formatted_date}",
         "hourly_far_future": "Часовите данни за разпределението не са налични толкова напред във времето.",
@@ -343,6 +347,7 @@ TRANSLATIONS = {
         # New Translations Added!
         "lang_label": "Език",
         "open_windy": "🌍 Отвори пълния радар на Windy.com",
+        "open_skywatch": "🌍 Отвори SkyWatch BG в нов таб",
 
         # Card strings
         "card_current_temp": "Текуща темп.",
@@ -1388,7 +1393,9 @@ def main():
 
                     # --- Long Term Forecasts & Radar Tabs ---
                     if daily and "time" in daily:
-                        tab7, tab14, tab_radar = st.tabs([t["forecast_7day"], t["forecast_14day"], t["live_radar"]])
+                        tab7, tab14, tab_radar, tab_skywatch = st.tabs(
+                            [t["forecast_7day"], t["forecast_14day"], t["live_radar"], t["skywatch_tab"]]
+                        )
 
                         with tab7:
                             with st.container(key="forecast_tab7"):
@@ -1435,6 +1442,22 @@ def main():
                             st.markdown(
                                 "<div class='radar-frame'>"
                                 f"<iframe src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0'></iframe>"
+                                "</div>",
+                                unsafe_allow_html=True
+                            )
+
+                        with tab_skywatch:
+                            st.markdown("<br>", unsafe_allow_html=True)
+
+                            # --- BIG REDIRECT BUTTON TO SKYWATCH BG ---
+                            st.link_button(t["open_skywatch"], url=SKYWATCH_URL, type="primary")
+
+                            st.markdown("<br>", unsafe_allow_html=True)
+
+                            # Keeps the embedded preview view visible just underneath
+                            st.markdown(
+                                "<div class='radar-frame'>"
+                                f"<iframe src='{SKYWATCH_URL}' frameborder='0'></iframe>"
                                 "</div>",
                                 unsafe_allow_html=True
                             )
