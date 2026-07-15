@@ -14,6 +14,7 @@ REVERSE_GEOCODING_API_URL = "https://nominatim.openstreetmap.org/reverse"
 REVERSE_GEOCODING_USER_AGENT = "WeatherAppStreamlit/1.0 (+https://github.com/Anton-Georgiev1/Weather-app)"
 LAST_CITY_STORAGE_KEY = "last_city"
 LAST_COUNTRY_STORAGE_KEY = "last_country"
+LAST_LANG_STORAGE_KEY = "last_lang"
 
 # Seasonal color palettes, ported from seasonal-themes.html. Each value is injected
 # as a CSS custom property so the same stylesheet can re-skin the whole app per season.
@@ -487,6 +488,15 @@ def save_last_location(local_storage: LocalStorage, city: str, country: str) -> 
         local_storage.setItem(LAST_CITY_STORAGE_KEY, city, key="set_last_city")
     if country:
         local_storage.setItem(LAST_COUNTRY_STORAGE_KEY, country, key="set_last_country")
+
+def load_last_language(local_storage: LocalStorage) -> str | None:
+    """Read the last selected UI language from the browser's local storage."""
+    return local_storage.getItem(LAST_LANG_STORAGE_KEY)
+
+def save_last_language(local_storage: LocalStorage, lang: str) -> None:
+    """Persist the selected UI language to the browser's local storage so it's restored
+    on the next visit instead of resetting to English."""
+    local_storage.setItem(LAST_LANG_STORAGE_KEY, lang, key="set_last_lang")
 
 def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
     f_params: dict[str, Any] = {
@@ -1015,23 +1025,40 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 """
 
 def main():
-    if "lang" not in st.session_state:
-        st.session_state.lang = "en"
     if "season" not in st.session_state:
         st.session_state.season = "summer"
     if "unit" not in st.session_state:
         st.session_state.unit = "C"
 
-    current_lang = st.session_state.lang
     current_season = st.session_state.season
     current_unit = st.session_state.unit
 
-    page_title = "Weather App" if current_lang == "en" else "Приложение за времето"
+    # set_page_config must be the very first Streamlit command, so it can't wait on the
+    # local storage read below (which needs a mounted component). Fall back to whatever
+    # language guess is already in session state; the local storage read just after fixes
+    # session_state.lang itself before any visible content renders, so on a fresh session
+    # the only thing that can lag by a run is this literal browser-tab title.
+    page_title_lang = st.session_state.get("lang", "en")
+    page_title = "Weather App" if page_title_lang == "en" else "Приложение за времето"
     st.set_page_config(page_title=page_title, page_icon="🌤️", layout="wide")
 
     theme = SEASON_THEMES[current_season]
     st.markdown(get_theme_css(theme), unsafe_allow_html=True)
 
+    local_storage = LocalStorage()
+    if "lang" not in st.session_state:
+        saved_lang = load_last_language(local_storage)
+        st.session_state.lang = saved_lang if saved_lang in TRANSLATIONS else "en"
+
+    # The language switch below calls st.rerun() immediately so the whole page redraws in
+    # the new language in one go. Writing to local storage in that same instant would tear
+    # the write's component down before the browser applies it, so the write is deferred to
+    # this next, rerun-free run instead.
+    pending_lang_save = st.session_state.pop("pending_lang_save", None)
+    if pending_lang_save:
+        save_last_language(local_storage, pending_lang_save)
+
+    current_lang = st.session_state.lang
     t = TRANSLATIONS[current_lang]
 
     # --- Main Page Header Layout: brand + season swatches + EN/BG + degC/degF ---
@@ -1100,6 +1127,7 @@ def main():
         st.rerun()
     if selected_lang != current_lang:
         st.session_state.lang = selected_lang
+        st.session_state.pending_lang_save = selected_lang
         st.rerun()
     if selected_unit != current_unit:
         st.session_state.unit = selected_unit
@@ -1110,7 +1138,6 @@ def main():
     t = TRANSLATIONS[lang]
 
     # Initialize session states for specific day drill-down AND remembering user inputs
-    local_storage = LocalStorage()
     if "selected_date" not in st.session_state:
         st.session_state.selected_date = None
     if "saved_city" not in st.session_state or "saved_country" not in st.session_state:
