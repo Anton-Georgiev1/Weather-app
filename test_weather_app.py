@@ -19,7 +19,9 @@ from Weather_app import (
     GEOCODING_API_URL,
     WEATHER_API_URL,
     REVERSE_GEOCODING_API_URL,
-    ALERT_LOOKAHEAD_DAYS
+    ALERT_LOOKAHEAD_DAYS,
+    DAY_CARD_STORM_CODES,
+    DAY_CARD_STORM_SEVERE_CODES
 )
 
 
@@ -242,6 +244,53 @@ def test_generate_day_card_html_wind_converts_to_mph_under_fahrenheit():
         "2024-01-01", 0, 10, wind=16.0934, max_t=20.0, min_t=10.0, unit="F"
     )
     assert "💨 10.0 mph" in result_imperial  # 16.0934 km/h ≈ 10 mph
+
+
+def test_generate_day_card_html_storm_severe_tier():
+    """Thunderstorm-with-hail/severe-thunderstorm codes get the darkest tier
+    class and its badge, in both languages."""
+    for code in DAY_CARD_STORM_SEVERE_CODES:
+        result_en = generate_day_card_html(
+            "2024-01-01", code, 80, wind=15.0, max_t=20.0, min_t=10.0, lang="en"
+        )
+        assert "day-card-storm-severe" in result_en
+        assert "day-card-storm'" not in result_en  # not misclassified as the lighter tier
+        assert "storm-badge" in result_en
+        assert "Severe" in result_en
+
+        result_bg = generate_day_card_html(
+            "2024-01-01", code, 80, wind=15.0, max_t=20.0, min_t=10.0, lang="bg"
+        )
+        assert "Опасно" in result_bg
+
+
+def test_generate_day_card_html_storm_tier():
+    """Heavy/violent rain, heavy snow, and plain thunderstorm codes get the
+    lighter storm tier class and its badge, not the severe tier."""
+    for code in DAY_CARD_STORM_CODES:
+        result_en = generate_day_card_html(
+            "2024-01-01", code, 80, wind=15.0, max_t=20.0, min_t=10.0, lang="en"
+        )
+        assert "day-card-storm'" in result_en
+        assert "day-card-storm-severe" not in result_en
+        assert "storm-badge" in result_en
+        assert "Storm" in result_en
+
+        result_bg = generate_day_card_html(
+            "2024-01-01", code, 80, wind=15.0, max_t=20.0, min_t=10.0, lang="bg"
+        )
+        assert "Буря" in result_bg
+
+
+def test_generate_day_card_html_no_storm_tier_for_mild_or_unknown_codes():
+    """Mild weather, clear sky, and an unresolved code must not get a storm
+    class or badge."""
+    for code in (None, 0, 61):
+        result = generate_day_card_html(
+            "2024-01-01", code, 10, wind=15.0, max_t=20.0, min_t=10.0
+        )
+        assert "day-card-storm" not in result
+        assert "storm-badge" not in result
 
 
 def test_generate_forecast_row_html_smoke():

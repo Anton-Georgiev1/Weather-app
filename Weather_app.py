@@ -293,6 +293,8 @@ TRANSLATIONS = {
         "card_rain_chance": "Rain chance",
         "severe_weather": "Severe Weather",
         "weather_advisory": "Weather Advisory",
+        "card_storm_badge": "Storm",
+        "card_storm_severe_badge": "Severe",
         "unknown": "Unknown",
 
         # Geolocation strings
@@ -354,6 +356,8 @@ TRANSLATIONS = {
         "card_rain_chance": "Шанс за валежи",
         "severe_weather": "Опасно време",
         "weather_advisory": "Предупреждение за времето",
+        "card_storm_badge": "Буря",
+        "card_storm_severe_badge": "Опасно",
         "unknown": "Неизвестно",
 
         # Geolocation strings
@@ -550,6 +554,12 @@ NEAR_TERM_RAIN_CODES = {51, 53, 55, 56, 57, 61, 63, 66, 80, 81}
 NEAR_TERM_STORM_CODES = {65, 67, 75, 82, 86, 95, 96, 99}
 NEAR_TERM_RAIN_PROBABILITY_THRESHOLD = 70
 
+# 7-day forecast card severity tiers, so a stormy day's card stands out from the rest
+# of the row. Thunderstorm-with-hail/severe-thunderstorm get the darker "severe" tier;
+# the rest of NEAR_TERM_STORM_CODES gets the lighter "storm" tier.
+DAY_CARD_STORM_SEVERE_CODES = {96, 99}
+DAY_CARD_STORM_CODES = NEAR_TERM_STORM_CODES - DAY_CARD_STORM_SEVERE_CODES
+
 def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en", unit: str = "C") -> list[dict[str, Any]]:
     """Analyze daily data for severe weather or wind alerts, limited to the near term
     (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting."""
@@ -720,7 +730,9 @@ def generate_day_card_html(
     lang: str = "en",
     unit: str = "C"
 ) -> str:
-    """Generate the HTML for a single compact 7-day card, matching the design's `.day-card`."""
+    """Generate the HTML for a single compact 7-day card, matching the design's `.day-card`.
+    Stormy codes (see DAY_CARD_STORM_CODES / DAY_CARD_STORM_SEVERE_CODES) add a severity
+    modifier class and a small badge so those days stand out from the rest of the row."""
     try:
         label = format_date(date_str, "%a", lang)
     except Exception:
@@ -729,6 +741,16 @@ def generate_day_card_html(
     resolved_code = code if code is not None else -1
     desc, emoji = get_wmo_info(resolved_code, lang)
     t = TRANSLATIONS[lang]
+
+    if resolved_code in DAY_CARD_STORM_SEVERE_CODES:
+        storm_class = " day-card-storm-severe"
+        storm_badge = f"<div class='storm-badge'>{t['card_storm_severe_badge']}</div>"
+    elif resolved_code in DAY_CARD_STORM_CODES:
+        storm_class = " day-card-storm"
+        storm_badge = f"<div class='storm-badge'>{t['card_storm_badge']}</div>"
+    else:
+        storm_class = ""
+        storm_badge = ""
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -740,7 +762,8 @@ def generate_day_card_html(
     min_t_str = format_temperature(min_t, unit)
 
     return (
-        "<div class='day-card'>"
+        f"<div class='day-card{storm_class}'>"
+        f"{storm_badge}"
         f"<div class='day'>{label}</div>"
         f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='desc'>{desc}</div>"
@@ -777,6 +800,17 @@ def get_theme_css(theme: dict[str, str]) -> str:
     --alert-error-text: color-mix(in srgb, var(--accent-deep) 55%, #3a0a0a 45%);
     --alert-error-shadow: color-mix(in srgb, var(--accent-shadow) 55%, rgba(198,40,40,.45) 45%);
     --alert-error-shadow-strong: color-mix(in srgb, var(--accent-shadow) 40%, rgba(198,40,40,.6) 60%);
+    --storm-bg: color-mix(in srgb, var(--accent-deep) 42%, var(--surface) 58%);
+    --storm-border: var(--accent-deep);
+    --storm-shadow: var(--accent-shadow);
+    --storm-shadow-hover: 0 6px 18px var(--accent-shadow);
+    /* Slightly darker than --storm-border so white badge text clears WCAG AA (4.5:1)
+       even on the lightest accent-deep tone (summer's #b06c22, ~4.2:1 unmixed). */
+    --storm-badge-bg: color-mix(in srgb, var(--accent-deep) 85%, black 15%);
+    --storm-severe-bg: color-mix(in srgb, var(--accent-deep) 68%, black 32%);
+    --storm-severe-border: color-mix(in srgb, var(--accent-deep) 50%, black 50%);
+    --storm-severe-shadow: color-mix(in srgb, var(--accent-shadow) 70%, black 30%);
+    --storm-severe-shadow-hover: 0 10px 26px color-mix(in srgb, var(--accent-shadow) 70%, black 30%);
 }}
 
 html, [data-testid="stAppViewContainer"], .stApp {{
@@ -1059,7 +1093,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 
 /* ---------- 7-DAY CARDS ---------- */
 .day-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }}
-.day-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; }}
+.day-card {{ position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; }}
 .day-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
 .day-card .day {{ font-size: 12.5px; font-weight: 700; margin-bottom: 6px; color: var(--text); }}
 .day-card .emoji {{ font-size: 32px; margin-bottom: 6px; cursor: help; }}
@@ -1068,6 +1102,26 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .day-card .temps .min {{ opacity: .45; font-weight: 600; }}
 .day-card .meta {{ display: flex; justify-content: center; gap: 10px; font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; color: var(--text); }}
 .day-card .meta span {{ cursor: help; }}
+
+/* ---------- STORM SEVERITY TREATMENT ---------- */
+.day-card.day-card-storm {{ background: var(--storm-bg); border: 1px solid var(--storm-border); box-shadow: 0 4px 14px var(--storm-shadow); }}
+.day-card.day-card-storm .desc {{ color: var(--text); }}
+.day-card.day-card-storm .meta {{ opacity: .85; border-top-color: var(--storm-border); }}
+.day-card.day-card-storm .temps .min {{ opacity: .85; }}
+.day-card.day-card-storm:hover {{ box-shadow: var(--storm-shadow-hover); }}
+
+.day-card.day-card-storm-severe {{ background: var(--storm-severe-bg); border: 2px solid var(--storm-severe-border); box-shadow: 0 8px 22px var(--storm-severe-shadow); }}
+.day-card.day-card-storm-severe .day,
+.day-card.day-card-storm-severe .desc,
+.day-card.day-card-storm-severe .temps {{ color: #fff; }}
+.day-card.day-card-storm-severe .meta,
+.day-card.day-card-storm-severe .temps .min {{ color: rgba(255,255,255,.85); opacity: 1; }}
+.day-card.day-card-storm-severe .meta {{ border-top-color: rgba(255,255,255,.35); }}
+.day-card.day-card-storm-severe:hover {{ box-shadow: var(--storm-severe-shadow-hover); }}
+
+.storm-badge {{ position: absolute; top: 8px; right: 8px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #fff; }}
+.day-card-storm .storm-badge {{ background: var(--storm-badge-bg); }}
+.day-card-storm-severe .storm-badge {{ background: var(--storm-severe-border); }}
 .st-key-forecast_tab7 .stButton button {{
     margin-top: 8px; height: 32px !important; min-height: 32px !important; font-size: 11.5px !important;
 }}
