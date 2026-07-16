@@ -928,6 +928,19 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .st-key-app_header [data-testid="stSegmentedControl"] label {{
     padding: 4px 8px !important;
 }}
+/* Below the mobile breakpoint, let the control row (season / auto-refresh / language / unit)
+   wrap onto multiple lines instead of the nowrap+shrink-to-fit rule above, which forces
+   every control into one unbreakable row and overflows the viewport on a phone. */
+@media (max-width: 640px) {{
+    .st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+        row-gap: 12px;
+    }}
+    .st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+        flex: 1 1 auto !important;
+        min-width: 130px !important;
+    }}
+}}
 .brand-row {{ display: flex; align-items: center; gap: 14px; }}
 .brand-icon {{
     width: 44px; height: 44px; border-radius: 12px; background: var(--accent-grad);
@@ -1030,6 +1043,26 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .row-14 .rain, .row-14 .wind {{ font-size: 11.5px; opacity: .6; font-weight: 600; text-align: right; color: var(--text); cursor: help; }}
 .st-key-forecast_tab14 .stButton button {{
     height: 32px !important; min-height: 32px !important; padding: 0 10px !important; font-size: 11.5px !important;
+}}
+/* The 6 fixed-width grid columns above need ~380px before the flexible 1fr
+   column even gets space, which overflows a phone viewport. Below the mobile
+   breakpoint, reflow the same six elements into a wrapping flex row instead:
+   emoji/day/temps on one line, description on its own line, rain/wind on a third. */
+@media (max-width: 640px) {{
+    .row-14 {{
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        column-gap: 10px;
+        row-gap: 4px;
+        padding: 12px 16px;
+    }}
+    .row-14 .emoji {{ order: 1; }}
+    .row-14 .day {{ order: 2; flex: 1 1 auto; min-width: 0; }}
+    .row-14 .temps {{ order: 3; }}
+    .row-14 .desc {{ order: 4; flex-basis: 100%; text-align: left; }}
+    .row-14 .rain {{ order: 5; text-align: left; }}
+    .row-14 .wind {{ order: 6; margin-left: auto; }}
 }}
 
 /* ---------- RADAR ---------- */
