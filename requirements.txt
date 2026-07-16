@@ -1,4 +1,8 @@
-streamlit
+# Pinned exactly: the mobile-header CSS (see get_theme_css) targets Streamlit's
+# internal DOM structure, which isn't part of its public API/semver contract and
+# has already changed under us once (see commits ced4635 / b955c28). A routine
+# upgrade here can silently re-break that layout with no error or test failure.
+streamlit==1.59.2
 streamlit-geolocation
 streamlit-local-storage
 httpx
