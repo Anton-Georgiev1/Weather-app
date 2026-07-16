@@ -308,7 +308,8 @@ TRANSLATIONS = {
 
         # Data refresh strings
         "refresh_now_button": "🔄 Refresh now",
-        "auto_refresh_label": "Auto-refresh every 15 min",
+        "auto_refresh_label": "Auto-refresh",
+        "auto_refresh_help": "Automatically refresh weather data every 15 minutes",
         "last_updated": "Last updated {time}",
     },
     "bg": {
@@ -368,7 +369,8 @@ TRANSLATIONS = {
 
         # Data refresh strings
         "refresh_now_button": "🔄 Обнови сега",
-        "auto_refresh_label": "Автоматично обновяване на всеки 15 мин",
+        "auto_refresh_label": "Автообновяване",
+        "auto_refresh_help": "Автоматично обновяване на данните за времето на всеки 15 минути",
         "last_updated": "Последно обновено {time}",
     }
 }
@@ -815,6 +817,20 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .st-key-app_header [data-testid="stHorizontalBlock"] {{
     align-items: center;
 }}
+/* Inner control row (season / auto-refresh / language / unit) lives inside col_controls, i.e.
+   nested one level deeper than the outer brand/controls split. Let each of its columns shrink
+   to fit its actual content instead of stretching to the ratio-based width st.columns() assigns
+   by default - that stretching is what left uneven dead-space gaps between the groups. A fixed
+   gap on the flex container then gives consistent, tight spacing regardless of content width. */
+.st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] {{
+    gap: 22px !important;
+    flex-wrap: nowrap;
+}}
+.st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+    flex: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+}}
 .st-key-app_header [data-testid="stCaptionContainer"] {{
     font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
     opacity: .5; color: var(--text); margin-top: 8px; white-space: nowrap;
@@ -940,6 +956,8 @@ def main():
         st.session_state.season = "summer"
     if "unit" not in st.session_state:
         st.session_state.unit = "C"
+    if "auto_refresh_enabled" not in st.session_state:
+        st.session_state.auto_refresh_enabled = True
 
     current_season = st.session_state.season
     current_unit = st.session_state.unit
@@ -972,9 +990,9 @@ def main():
     current_lang = st.session_state.lang
     t = TRANSLATIONS[current_lang]
 
-    # --- Main Page Header Layout: brand + season swatches + EN/BG + degC/degF ---
+    # --- Main Page Header Layout: brand + season swatches + auto-refresh + EN/BG + degC/degF ---
     with st.container(key="app_header"):
-        col_brand, col_controls = st.columns([3, 3])
+        col_brand, col_controls = st.columns([2, 4])
 
         with col_brand:
             brand_html = (
@@ -989,14 +1007,11 @@ def main():
             st.markdown(brand_html, unsafe_allow_html=True)
 
         with col_controls:
-            col_season_label, col_season_swatches, col_lang, col_unit = st.columns([1, 2, 1, 1])
+            col_season, col_refresh, col_lang, col_unit = st.columns(4)
 
-            with col_season_label:
-                st.caption(t["season_label"])
-
-            with col_season_swatches:
+            with col_season:
                 season_keys = list(SEASON_THEMES.keys())
-                season_legend = " · ".join(
+                season_legend = t["season_label"] + ": " + " · ".join(
                     f"{SEASON_THEMES[key]['emoji']} {SEASON_THEMES[key][f'label_{current_lang}']}"
                     for key in season_keys
                 )
@@ -1010,6 +1025,20 @@ def main():
                     label_visibility="collapsed",
                     help=season_legend
                 )
+
+            with col_refresh:
+                col_refresh_toggle, col_refresh_button = st.columns(2)
+                with col_refresh_toggle:
+                    st.session_state.auto_refresh_enabled = st.toggle(
+                        t["auto_refresh_label"],
+                        value=st.session_state.auto_refresh_enabled,
+                        help=t["auto_refresh_help"]
+                    )
+                with col_refresh_button:
+                    # Populated later by the render_weather_dashboard fragment so the
+                    # refresh button lives in the header but its click still only
+                    # reruns the fragment, not the whole page.
+                    refresh_button_slot = st.container()
 
             with col_lang:
                 lang_options = {"EN": "en", "BG": "bg"}
@@ -1066,8 +1095,6 @@ def main():
         st.session_state.geo_location = None
     if "geo_processed_coords" not in st.session_state:
         st.session_state.geo_processed_coords = None
-    if "auto_refresh_enabled" not in st.session_state:
-        st.session_state.auto_refresh_enabled = True
 
     # Input Layout
     with st.container(key="location_card"):
@@ -1164,23 +1191,25 @@ def main():
     if using_geo_location and active_geo_location is not None and not active_geo_location.get("country"):
         active_geo_location["name"] = t["geo_header_generic"]
 
-    st.session_state.auto_refresh_enabled = st.toggle(
-        t["auto_refresh_label"], value=st.session_state.auto_refresh_enabled
-    )
     refresh_interval = "15m" if st.session_state.auto_refresh_enabled else None
 
     @st.fragment(run_every=refresh_interval)
-    def render_weather_dashboard(location: dict[str, Any], lang: str, unit: str, using_geo_location: bool) -> None:
+    def render_weather_dashboard(
+        location: dict[str, Any],
+        lang: str,
+        unit: str,
+        using_geo_location: bool,
+        refresh_button_slot: DeltaGenerator
+    ) -> None:
         """Fetch and display current/hourly/daily weather for a resolved location.
-        Wrapped in a fragment so the refresh button and auto-refresh timer only
-        re-run this section, not the whole page (search inputs, tabs, scroll, etc.)."""
+        Wrapped in a fragment so the refresh button (rendered into a slot back in
+        the header) and the auto-refresh timer only re-run this section, not the
+        whole page (search inputs, tabs, scroll, etc.)."""
         t = TRANSLATIONS[lang]
 
-        refresh_col, updated_col = st.columns([1, 3])
-        with refresh_col:
-            st.button(t["refresh_now_button"], key="refresh_now_button", use_container_width=True)
-        with updated_col:
-            st.caption(t["last_updated"].format(time=datetime.now().strftime("%H:%M:%S")))
+        with refresh_button_slot:
+            st.button(t["refresh_now_button"], key="refresh_now_button")
+        st.caption(t["last_updated"].format(time=datetime.now().strftime("%H:%M:%S")))
 
         lat, lon = location["latitude"], location["longitude"]
         with st.spinner(t["fetching"]):
@@ -1424,7 +1453,7 @@ def main():
             )
 
         if location:
-            render_weather_dashboard(location, lang, unit, using_geo_location)
+            render_weather_dashboard(location, lang, unit, using_geo_location, refresh_button_slot)
         else:
             st.warning(t["loc_not_found"])
 
