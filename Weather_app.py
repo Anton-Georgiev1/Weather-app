@@ -281,12 +281,9 @@ TRANSLATIONS = {
         "open_skywatch": "🌍 Open SkyWatch BG in a New Tab",
 
         # Card strings
-        "card_current_temp": "Current Temp",
         "card_feels_like": "Feels like",
         "card_day_max": "Day Max",
         "card_day_min": "Day Min",
-        "card_max": "Max",
-        "card_min": "Min",
         "card_hum": "Hum",
         "card_wind": "Wind",
         "card_rain_chance": "Rain chance",
@@ -342,12 +339,9 @@ TRANSLATIONS = {
         "open_skywatch": "🌍 Отвори SkyWatch BG в нов таб",
 
         # Card strings
-        "card_current_temp": "Текуща темп.",
         "card_feels_like": "Усеща се като",
         "card_day_max": "Макс. за деня",
         "card_day_min": "Мин. за деня",
-        "card_max": "Макс",
-        "card_min": "Мин",
         "card_hum": "Влаж.",
         "card_wind": "Вятър",
         "card_rain_chance": "Шанс за валежи",
@@ -669,10 +663,7 @@ def generate_day_card_html(
     except (ValueError, TypeError):
         rain_prob_val = 0
 
-    if wind is not None:
-        wind_val = round(wind * 0.621371) if unit == "F" else round(wind)
-    else:
-        wind_val = "--"
+    wind_str = format_wind_speed(wind, unit, lang)
     max_t_str = format_temperature(max_t, unit)
     min_t_str = format_temperature(min_t, unit)
 
@@ -684,7 +675,7 @@ def generate_day_card_html(
         f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
         "<div class='meta'>"
         f"<span title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</span>"
-        f"<span title='{t['card_wind']}'>💨 {wind_val}</span>"
+        f"<span title='{t['card_wind']}'>💨 {wind_str}</span>"
         "</div>"
         "</div>"
     )
@@ -957,7 +948,11 @@ def main():
     if "unit" not in st.session_state:
         st.session_state.unit = "C"
     if "auto_refresh_enabled" not in st.session_state:
-        st.session_state.auto_refresh_enabled = True
+        # Off by default: the whole dashboard (including the Radar/SkyWatch iframe
+        # embeds) lives in one fragment, so an enabled timer silently reloads those
+        # embeds every 15 minutes even with no user interaction. Opt-in avoids that
+        # surprise for anyone who never touches the toggle.
+        st.session_state.auto_refresh_enabled = False
 
     current_season = st.session_state.season
     current_unit = st.session_state.unit
@@ -1340,7 +1335,7 @@ def main():
                     btn_key = f"btn_{tab_prefix}_{daily['time'][data_index]}"
                     if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
                         st.session_state.selected_date = daily["time"][data_index]
-                        st.rerun()
+                        st.rerun(scope="fragment")
 
             # --- Long Term Forecasts & Radar Tabs ---
             if daily and "time" in daily:
@@ -1378,7 +1373,7 @@ def main():
                                 btn_key = f"btn_tab14_{daily['time'][idx]}"
                                 if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
                                     st.session_state.selected_date = daily["time"][idx]
-                                    st.rerun()
+                                    st.rerun(scope="fragment")
 
                 with tab_radar:
                     st.markdown("<br>", unsafe_allow_html=True)

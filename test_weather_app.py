@@ -117,12 +117,14 @@ def test_generate_day_card_html_smoke():
     assert "title='Wind'" in result
 
 def test_generate_day_card_html_wind_converts_to_mph_under_fahrenheit():
-    """Wind speed must follow the temperature unit toggle, not stay locked to km/h."""
+    """Wind speed must follow the temperature unit toggle (not stay locked to km/h),
+    and must always show its unit so the same bare number can't silently mean two
+    different things depending on the toggle."""
     result_metric = generate_day_card_html("2024-01-01", 0, 10, wind=16.0934, max_t=20.0, min_t=10.0, unit="C")
-    assert "💨 16<" in result_metric
+    assert "💨 16.1 km/h" in result_metric
 
     result_imperial = generate_day_card_html("2024-01-01", 0, 10, wind=16.0934, max_t=20.0, min_t=10.0, unit="F")
-    assert "💨 10<" in result_imperial  # 16.0934 km/h ≈ 10 mph
+    assert "💨 10.0 mph" in result_imperial  # 16.0934 km/h ≈ 10 mph
 
 def test_generate_forecast_row_html_smoke():
     """Smoke test for the 14-day compact row, including the rain/wind tooltip text."""
