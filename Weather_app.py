@@ -1,4 +1,5 @@
 import html
+from datetime import datetime
 from typing import Any
 
 import streamlit as st
@@ -304,6 +305,11 @@ TRANSLATIONS = {
         "brand_sub": "Live forecast, styled to the season",
         "season_label": "Season",
         "search_button": "Search",
+
+        # Data refresh strings
+        "refresh_now_button": "🔄 Refresh now",
+        "auto_refresh_label": "Auto-refresh every 15 min",
+        "last_updated": "Last updated {time}",
     },
     "bg": {
         "page_title": "Приложение за времето",
@@ -359,6 +365,11 @@ TRANSLATIONS = {
         "brand_sub": "Прогноза на живо, стилизирана според сезона",
         "season_label": "Сезон",
         "search_button": "Търсене",
+
+        # Data refresh strings
+        "refresh_now_button": "🔄 Обнови сега",
+        "auto_refresh_label": "Автоматично обновяване на всеки 15 мин",
+        "last_updated": "Последно обновено {time}",
     }
 }
 
@@ -1055,6 +1066,8 @@ def main():
         st.session_state.geo_location = None
     if "geo_processed_coords" not in st.session_state:
         st.session_state.geo_processed_coords = None
+    if "auto_refresh_enabled" not in st.session_state:
+        st.session_state.auto_refresh_enabled = True
 
     # Input Layout
     with st.container(key="location_card"):
@@ -1151,106 +1164,239 @@ def main():
     if using_geo_location and active_geo_location is not None and not active_geo_location.get("country"):
         active_geo_location["name"] = t["geo_header_generic"]
 
-    if using_geo_location or city_input:
+    st.session_state.auto_refresh_enabled = st.toggle(
+        t["auto_refresh_label"], value=st.session_state.auto_refresh_enabled
+    )
+    refresh_interval = "15m" if st.session_state.auto_refresh_enabled else None
+
+    @st.fragment(run_every=refresh_interval)
+    def render_weather_dashboard(location: dict[str, Any], lang: str, unit: str, using_geo_location: bool) -> None:
+        """Fetch and display current/hourly/daily weather for a resolved location.
+        Wrapped in a fragment so the refresh button and auto-refresh timer only
+        re-run this section, not the whole page (search inputs, tabs, scroll, etc.)."""
+        t = TRANSLATIONS[lang]
+
+        refresh_col, updated_col = st.columns([1, 3])
+        with refresh_col:
+            st.button(t["refresh_now_button"], key="refresh_now_button", use_container_width=True)
+        with updated_col:
+            st.caption(t["last_updated"].format(time=datetime.now().strftime("%H:%M:%S")))
+
+        lat, lon = location["latitude"], location["longitude"]
         with st.spinner(t["fetching"]):
-            location = (
-                st.session_state.geo_location if using_geo_location
-                else get_coordinates(city_input, country_input, lang=lang)
+            f_data = get_weather_data(lat, lon)
+
+        if f_data:
+            hourly = f_data.get("hourly", {})
+            daily = f_data.get("daily", {})
+            curr = f_data.get("current", {})
+
+            # --- Main Screen Location + Hero ---
+            # Escaped because this is third-party geocoding/reverse-geocoding data
+            # (Open-Meteo / OpenStreetMap Nominatim) rendered via unsafe_allow_html.
+            location_label = html.escape(location["name"])
+            if location.get("country"):
+                location_label += f", {html.escape(location['country'])}"
+            st.markdown(
+                f"<div class='location'><span title='{t['geo_header_generic']}'>📍</span><span class='name'>{location_label}</span></div>",
+                unsafe_allow_html=True
             )
 
-            if location:
-                lat, lon = location["latitude"], location["longitude"]
-                f_data = get_weather_data(lat, lon)
+            if using_geo_location and not location.get("country"):
+                st.info(t["geo_reverse_lookup_failed"])
 
-                if f_data:
-                    hourly = f_data.get("hourly", {})
-                    daily = f_data.get("daily", {})
-                    curr = f_data.get("current", {})
+            current_code = curr.get("weather_code")
+            current_desc, current_emoji = get_wmo_info(
+                current_code if current_code is not None else -1, lang
+            )
+            wind_speed_val = curr.get("wind_speed_10m")
+            wind_str = format_wind_speed(wind_speed_val, unit, lang)
+            humidity_val = curr.get("relative_humidity_2m")
+            humidity_str = f"{humidity_val}%" if humidity_val is not None else "--%"
+            rain_chance_val = safe_get(daily, "precipitation_probability_max", 0)
+            rain_chance_str = f"{rain_chance_val}%" if rain_chance_val is not None else "--%"
 
-                    # --- Main Screen Location + Hero ---
-                    # Escaped because this is third-party geocoding/reverse-geocoding data
-                    # (Open-Meteo / OpenStreetMap Nominatim) rendered via unsafe_allow_html.
-                    location_label = html.escape(location["name"])
-                    if location.get("country"):
-                        location_label += f", {html.escape(location['country'])}"
+            hero_html = (
+                "<div class='hero'>"
+                "<div class='hero-main'>"
+                f"<div class='hero-emoji' title='{current_desc}'>{current_emoji}</div>"
+                "<div>"
+                f"<div class='hero-temp'>{format_temperature(curr.get('temperature_2m'), unit)}</div>"
+                f"<div class='hero-feels'>{t['card_feels_like']} {format_temperature(curr.get('apparent_temperature'), unit)}</div>"
+                f"<div class='hero-desc'>{current_desc}</div>"
+                "</div>"
+                "</div>"
+                "<div class='stat-grid'>"
+                f"<div class='stat-chip'><div class='label'>{t['card_day_max']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_max', 0), unit)}</div></div>"
+                f"<div class='stat-chip'><div class='label'>{t['card_day_min']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_min', 0), unit)}</div></div>"
+                f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value'>{wind_str}</div></div>"
+                f"<div class='stat-chip'><div class='label'>{t['card_hum']}</div><div class='value'>{humidity_str}</div></div>"
+                f"<div class='stat-chip'><div class='label'>{t['card_rain_chance']}</div><div class='value'>{rain_chance_str}</div></div>"
+                "</div>"
+                "</div>"
+            )
+            st.markdown(hero_html, unsafe_allow_html=True)
+
+            # --- Alerts Section (only shown when there's an actual alert) ---
+            alerts = get_weather_alerts(daily, lang=lang, unit=unit) if daily and "time" in daily else []
+            if alerts:
+                st.divider()
+                st.subheader(t["alerts_header"].format(city=location['name']))
+                alerts_html = "".join(generate_alert_html("⚠️", alert["message"], lang=lang) for alert in alerts)
+                st.markdown(alerts_html, unsafe_allow_html=True)
+
+            st.divider()
+
+            # --- Immediate 24h Hourly Track (horizontal scroll strip) ---
+            if hourly and "time" in hourly:
+                st.subheader(t["next_24h"])
+
+                # Hourly data starts at 00:00 of the current day, so index 0 is
+                # usually already in the past by the time the user looks at it.
+                # Find the first hour that hasn't happened yet and default the
+                # window to start there instead of showing stale hours first.
+                current_time: str | None = curr.get("time")
+                current_hour_key = f"{current_time[:13]}:00" if current_time else None
+                upcoming_start_idx = 0
+                if current_hour_key:
+                    for idx, time_str in enumerate(hourly["time"]):
+                        if time_str >= current_hour_key:
+                            upcoming_start_idx = idx
+                            break
+
+                if "show_past_hours" not in st.session_state:
+                    st.session_state.show_past_hours = False
+                st.session_state.show_past_hours = st.toggle(
+                    t["show_past_hours"], value=st.session_state.show_past_hours
+                )
+
+                start_idx = 0 if st.session_state.show_past_hours else upcoming_start_idx
+                end_idx = min(start_idx + 24, len(hourly["time"]))
+                hour_indices = list(range(start_idx, end_idx))
+
+                hour_cards_html = "".join(
+                    generate_hour_card_html(
+                        hourly["time"][idx],
+                        code=safe_get(hourly, "weather_code", idx),
+                        rain_prob=safe_get(hourly, "precipitation_probability", idx),
+                        temp=safe_get(hourly, "temperature_2m", idx),
+                        lang=lang,
+                        unit=unit
+                    )
+                    for idx in hour_indices
+                )
+                st.markdown(f"<div class='hour-strip'>{hour_cards_html}</div>", unsafe_allow_html=True)
+            else:
+                st.warning(t["hourly_unavailable"])
+
+            st.divider()
+
+            # --- Helper function to display card + button (7-day tab) ---
+            def display_daily_column(st_col: DeltaGenerator, data_index: int, tab_prefix: str) -> None:
+                with st_col:
                     st.markdown(
-                        f"<div class='location'><span title='{t['geo_header_generic']}'>📍</span><span class='name'>{location_label}</span></div>",
+                        generate_day_card_html(
+                            daily["time"][data_index],
+                            code=safe_get(daily, "weather_code", data_index),
+                            rain_prob=safe_get(daily, "precipitation_probability_max", data_index),
+                            wind=safe_get(daily, "wind_speed_10m_max", data_index),
+                            max_t=safe_get(daily, "temperature_2m_max", data_index),
+                            min_t=safe_get(daily, "temperature_2m_min", data_index),
+                            lang=lang,
+                            unit=unit
+                        ),
+                        unsafe_allow_html=True
+                    )
+                    # UNIQUE KEY: combining the tab name and the date to prevent duplicate key crashes
+                    btn_key = f"btn_{tab_prefix}_{daily['time'][data_index]}"
+                    if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
+                        st.session_state.selected_date = daily["time"][data_index]
+                        st.rerun()
+
+            # --- Long Term Forecasts & Radar Tabs ---
+            if daily and "time" in daily:
+                tab7, tab14, tab_radar, tab_skywatch = st.tabs(
+                    [t["forecast_7day"], t["forecast_14day"], t["live_radar"], t["skywatch_tab"]]
+                )
+
+                with tab7:
+                    with st.container(key="forecast_tab7"):
+                        num_7 = min(7, len(daily["time"]))
+                        cols = st.columns(7)
+                        for i in range(num_7):
+                            display_daily_column(cols[i], i, "tab7")
+
+                with tab14:
+                    with st.container(key="forecast_tab14"):
+                        num_14 = min(14, len(daily["time"]))
+                        for idx in range(num_14):
+                            row_col, btn_col = st.columns([6, 1])
+                            with row_col:
+                                st.markdown(
+                                    generate_forecast_row_html(
+                                        daily["time"][idx],
+                                        code=safe_get(daily, "weather_code", idx),
+                                        rain_prob=safe_get(daily, "precipitation_probability_max", idx),
+                                        wind=safe_get(daily, "wind_speed_10m_max", idx),
+                                        max_t=safe_get(daily, "temperature_2m_max", idx),
+                                        min_t=safe_get(daily, "temperature_2m_min", idx),
+                                        lang=lang,
+                                        unit=unit
+                                    ),
+                                    unsafe_allow_html=True
+                                )
+                            with btn_col:
+                                btn_key = f"btn_tab14_{daily['time'][idx]}"
+                                if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
+                                    st.session_state.selected_date = daily["time"][idx]
+                                    st.rerun()
+
+                with tab_radar:
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    # --- BIG REDIRECT BUTTON TO WINDY.COM ---
+                    windy_redirect_url = f"https://www.windy.com/-Weather-radar-radar?radar,{lat},{lon},6"
+                    st.link_button(t["open_windy"], url=windy_redirect_url, type="primary")
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    # Keeps the embedded preview view visible just underneath
+                    st.markdown(
+                        "<div class='radar-frame'>"
+                        f"<iframe src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0'></iframe>"
+                        "</div>",
                         unsafe_allow_html=True
                     )
 
-                    if using_geo_location and not location.get("country"):
-                        st.info(t["geo_reverse_lookup_failed"])
+                with tab_skywatch:
+                    st.markdown("<br>", unsafe_allow_html=True)
 
-                    current_code = curr.get("weather_code")
-                    current_desc, current_emoji = get_wmo_info(
-                        current_code if current_code is not None else -1, lang
+                    # --- BIG REDIRECT BUTTON TO SKYWATCH BG ---
+                    st.link_button(t["open_skywatch"], url=SKYWATCH_URL, type="primary")
+
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+                    # Keeps the embedded preview view visible just underneath
+                    st.markdown(
+                        "<div class='radar-frame'>"
+                        f"<iframe src='{SKYWATCH_URL}' frameborder='0'></iframe>"
+                        "</div>",
+                        unsafe_allow_html=True
                     )
-                    wind_speed_val = curr.get("wind_speed_10m")
-                    wind_str = format_wind_speed(wind_speed_val, unit, lang)
-                    humidity_val = curr.get("relative_humidity_2m")
-                    humidity_str = f"{humidity_val}%" if humidity_val is not None else "--%"
-                    rain_chance_val = safe_get(daily, "precipitation_probability_max", 0)
-                    rain_chance_str = f"{rain_chance_val}%" if rain_chance_val is not None else "--%"
 
-                    hero_html = (
-                        "<div class='hero'>"
-                        "<div class='hero-main'>"
-                        f"<div class='hero-emoji' title='{current_desc}'>{current_emoji}</div>"
-                        "<div>"
-                        f"<div class='hero-temp'>{format_temperature(curr.get('temperature_2m'), unit)}</div>"
-                        f"<div class='hero-feels'>{t['card_feels_like']} {format_temperature(curr.get('apparent_temperature'), unit)}</div>"
-                        f"<div class='hero-desc'>{current_desc}</div>"
-                        "</div>"
-                        "</div>"
-                        "<div class='stat-grid'>"
-                        f"<div class='stat-chip'><div class='label'>{t['card_day_max']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_max', 0), unit)}</div></div>"
-                        f"<div class='stat-chip'><div class='label'>{t['card_day_min']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_min', 0), unit)}</div></div>"
-                        f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value'>{wind_str}</div></div>"
-                        f"<div class='stat-chip'><div class='label'>{t['card_hum']}</div><div class='value'>{humidity_str}</div></div>"
-                        f"<div class='stat-chip'><div class='label'>{t['card_rain_chance']}</div><div class='value'>{rain_chance_str}</div></div>"
-                        "</div>"
-                        "</div>"
-                    )
-                    st.markdown(hero_html, unsafe_allow_html=True)
-
-                    # --- Alerts Section (only shown when there's an actual alert) ---
-                    alerts = get_weather_alerts(daily, lang=lang, unit=unit) if daily and "time" in daily else []
-                    if alerts:
-                        st.divider()
-                        st.subheader(t["alerts_header"].format(city=location['name']))
-                        alerts_html = "".join(generate_alert_html("⚠️", alert["message"], lang=lang) for alert in alerts)
-                        st.markdown(alerts_html, unsafe_allow_html=True)
-
+                # --- Specific Day Clicked Section ---
+                if st.session_state.selected_date:
                     st.divider()
+                    sel_date = st.session_state.selected_date
+                    formatted_sel_date = format_date(sel_date, "%A, %B %d", lang)
 
-                    # --- Immediate 24h Hourly Track (horizontal scroll strip) ---
-                    if hourly and "time" in hourly:
-                        st.subheader(t["next_24h"])
+                    st.subheader(t["hourly_header"].format(formatted_date=formatted_sel_date))
 
-                        # Hourly data starts at 00:00 of the current day, so index 0 is
-                        # usually already in the past by the time the user looks at it.
-                        # Find the first hour that hasn't happened yet and default the
-                        # window to start there instead of showing stale hours first.
-                        current_time: str | None = curr.get("time")
-                        current_hour_key = f"{current_time[:13]}:00" if current_time else None
-                        upcoming_start_idx = 0
-                        if current_hour_key:
-                            for idx, time_str in enumerate(hourly["time"]):
-                                if time_str >= current_hour_key:
-                                    upcoming_start_idx = idx
-                                    break
+                    # Find all hour indices that match the clicked date
+                    day_indices = [idx for idx, time_str in enumerate(hourly.get("time", [])) if time_str.startswith(sel_date)]
 
-                        if "show_past_hours" not in st.session_state:
-                            st.session_state.show_past_hours = False
-                        st.session_state.show_past_hours = st.toggle(
-                            t["show_past_hours"], value=st.session_state.show_past_hours
-                        )
-
-                        start_idx = 0 if st.session_state.show_past_hours else upcoming_start_idx
-                        end_idx = min(start_idx + 24, len(hourly["time"]))
-                        hour_indices = list(range(start_idx, end_idx))
-
-                        hour_cards_html = "".join(
+                    if day_indices:
+                        day_cards_html = "".join(
                             generate_hour_card_html(
                                 hourly["time"][idx],
                                 code=safe_get(hourly, "weather_code", idx),
@@ -1259,140 +1405,28 @@ def main():
                                 lang=lang,
                                 unit=unit
                             )
-                            for idx in hour_indices
+                            for idx in day_indices
                         )
-                        st.markdown(f"<div class='hour-strip'>{hour_cards_html}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='hour-strip'>{day_cards_html}</div>", unsafe_allow_html=True)
                     else:
-                        st.warning(t["hourly_unavailable"])
+                        st.info(t["hourly_far_future"])
 
-                    st.divider()
-
-                    # --- Helper function to display card + button (7-day tab) ---
-                    def display_daily_column(st_col: DeltaGenerator, data_index: int, tab_prefix: str) -> None:
-                        with st_col:
-                            st.markdown(
-                                generate_day_card_html(
-                                    daily["time"][data_index],
-                                    code=safe_get(daily, "weather_code", data_index),
-                                    rain_prob=safe_get(daily, "precipitation_probability_max", data_index),
-                                    wind=safe_get(daily, "wind_speed_10m_max", data_index),
-                                    max_t=safe_get(daily, "temperature_2m_max", data_index),
-                                    min_t=safe_get(daily, "temperature_2m_min", data_index),
-                                    lang=lang,
-                                    unit=unit
-                                ),
-                                unsafe_allow_html=True
-                            )
-                            # UNIQUE KEY: combining the tab name and the date to prevent duplicate key crashes
-                            btn_key = f"btn_{tab_prefix}_{daily['time'][data_index]}"
-                            if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
-                                st.session_state.selected_date = daily["time"][data_index]
-                                st.rerun()
-
-                    # --- Long Term Forecasts & Radar Tabs ---
-                    if daily and "time" in daily:
-                        tab7, tab14, tab_radar, tab_skywatch = st.tabs(
-                            [t["forecast_7day"], t["forecast_14day"], t["live_radar"], t["skywatch_tab"]]
-                        )
-
-                        with tab7:
-                            with st.container(key="forecast_tab7"):
-                                num_7 = min(7, len(daily["time"]))
-                                cols = st.columns(7)
-                                for i in range(num_7):
-                                    display_daily_column(cols[i], i, "tab7")
-
-                        with tab14:
-                            with st.container(key="forecast_tab14"):
-                                num_14 = min(14, len(daily["time"]))
-                                for idx in range(num_14):
-                                    row_col, btn_col = st.columns([6, 1])
-                                    with row_col:
-                                        st.markdown(
-                                            generate_forecast_row_html(
-                                                daily["time"][idx],
-                                                code=safe_get(daily, "weather_code", idx),
-                                                rain_prob=safe_get(daily, "precipitation_probability_max", idx),
-                                                wind=safe_get(daily, "wind_speed_10m_max", idx),
-                                                max_t=safe_get(daily, "temperature_2m_max", idx),
-                                                min_t=safe_get(daily, "temperature_2m_min", idx),
-                                                lang=lang,
-                                                unit=unit
-                                            ),
-                                            unsafe_allow_html=True
-                                        )
-                                    with btn_col:
-                                        btn_key = f"btn_tab14_{daily['time'][idx]}"
-                                        if st.button(t["btn_24h"], key=btn_key, use_container_width=True):
-                                            st.session_state.selected_date = daily["time"][idx]
-                                            st.rerun()
-
-                        with tab_radar:
-                            st.markdown("<br>", unsafe_allow_html=True)
-
-                            # --- BIG REDIRECT BUTTON TO WINDY.COM ---
-                            windy_redirect_url = f"https://www.windy.com/-Weather-radar-radar?radar,{lat},{lon},6"
-                            st.link_button(t["open_windy"], url=windy_redirect_url, type="primary")
-
-                            st.markdown("<br>", unsafe_allow_html=True)
-
-                            # Keeps the embedded preview view visible just underneath
-                            st.markdown(
-                                "<div class='radar-frame'>"
-                                f"<iframe src='https://embed.windy.com/embed2.html?lat={lat}&lon={lon}&zoom=6&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1&play=1' frameborder='0'></iframe>"
-                                "</div>",
-                                unsafe_allow_html=True
-                            )
-
-                        with tab_skywatch:
-                            st.markdown("<br>", unsafe_allow_html=True)
-
-                            # --- BIG REDIRECT BUTTON TO SKYWATCH BG ---
-                            st.link_button(t["open_skywatch"], url=SKYWATCH_URL, type="primary")
-
-                            st.markdown("<br>", unsafe_allow_html=True)
-
-                            # Keeps the embedded preview view visible just underneath
-                            st.markdown(
-                                "<div class='radar-frame'>"
-                                f"<iframe src='{SKYWATCH_URL}' frameborder='0'></iframe>"
-                                "</div>",
-                                unsafe_allow_html=True
-                            )
-
-                        # --- Specific Day Clicked Section ---
-                        if st.session_state.selected_date:
-                            st.divider()
-                            sel_date = st.session_state.selected_date
-                            formatted_sel_date = format_date(sel_date, "%A, %B %d", lang)
-
-                            st.subheader(t["hourly_header"].format(formatted_date=formatted_sel_date))
-
-                            # Find all hour indices that match the clicked date
-                            day_indices = [idx for idx, time_str in enumerate(hourly.get("time", [])) if time_str.startswith(sel_date)]
-
-                            if day_indices:
-                                day_cards_html = "".join(
-                                    generate_hour_card_html(
-                                        hourly["time"][idx],
-                                        code=safe_get(hourly, "weather_code", idx),
-                                        rain_prob=safe_get(hourly, "precipitation_probability", idx),
-                                        temp=safe_get(hourly, "temperature_2m", idx),
-                                        lang=lang,
-                                        unit=unit
-                                    )
-                                    for idx in day_indices
-                                )
-                                st.markdown(f"<div class='hour-strip'>{day_cards_html}</div>", unsafe_allow_html=True)
-                            else:
-                                st.info(t["hourly_far_future"])
-
-                    else:
-                        st.warning(t["daily_unavailable"])
-                else:
-                    st.error(t["fetch_failed"])
             else:
-                st.warning(t["loc_not_found"])
+                st.warning(t["daily_unavailable"])
+        else:
+            st.error(t["fetch_failed"])
+
+    if using_geo_location or city_input:
+        with st.spinner(t["fetching"]):
+            location = (
+                st.session_state.geo_location if using_geo_location
+                else get_coordinates(city_input, country_input, lang=lang)
+            )
+
+        if location:
+            render_weather_dashboard(location, lang, unit, using_geo_location)
+        else:
+            st.warning(t["loc_not_found"])
 
 if __name__ == "__main__":
     main()
