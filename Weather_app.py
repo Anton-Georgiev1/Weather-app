@@ -264,6 +264,7 @@ TRANSLATIONS = {
         "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind}</strong>.",
         "alert_rain_soon": "<strong>Heads up:</strong> {condition_name} expected within the hour (<strong>{prob}%</strong> chance of precipitation).",
         "alert_storm_soon": "<strong>Storm Warning:</strong> {condition_name} expected within the hour! (<strong>{prob}%</strong> chance of precipitation)",
+        "condition_rain_generic": "Rain",
         "next_24h": "Immediate Next 24 Hours",
         "show_past_hours": "Show hours that already passed",
         "hourly_unavailable": "Hourly data unavailable.",
@@ -327,6 +328,7 @@ TRANSLATIONS = {
         "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind}</strong>.",
         "alert_rain_soon": "<strong>Внимание:</strong> Очаква се {condition_name} до един час (<strong>{prob}%</strong> шанс за валежи).",
         "alert_storm_soon": "<strong>Предупреждение за буря:</strong> Очаква се {condition_name} до един час! (<strong>{prob}%</strong> шанс за валежи)",
+        "condition_rain_generic": "Дъжд",
         "next_24h": "Следващите 24 часа",
         "show_past_hours": "Покажи изминалите часове",
         "hourly_unavailable": "Часовите данни са ненайдостъпни.",
@@ -613,6 +615,7 @@ def get_near_term_alerts(hourly_data: dict[str, Any], upcoming_start_idx: int, l
     best_severity: AlertSeverity | None = None
     best_code: int | None = None
     best_prob: float | int = 0
+    best_idx: int | None = None
 
     for idx in range(upcoming_start_idx, upcoming_start_idx + NEAR_TERM_LOOKAHEAD_HOURS + 1):
         wcode = safe_get(hourly_data, "weather_code", idx)
@@ -630,18 +633,44 @@ def get_near_term_alerts(hourly_data: dict[str, Any], upcoming_start_idx: int, l
         # (first match wins) since idx increases with the loop.
         if severity_rank[severity] <= best_rank:
             continue
-        best_rank, best_severity, best_code, best_prob = severity_rank[severity], severity, wcode, prob
+        best_rank, best_severity, best_code, best_prob, best_idx = severity_rank[severity], severity, wcode, prob, idx
 
     if best_severity is None:
         return []
 
-    condition_name = get_wmo_info(best_code if best_code is not None else -1, lang)[0]
+    # A probability-only trigger (prob >= threshold but wcode isn't itself a
+    # rain/storm code) shouldn't borrow wcode's condition text -- e.g. a "Clear
+    # sky" wcode with an 85% precipitation_probability would otherwise render
+    # as "Clear sky expected... (85% chance of precipitation)", contradicting
+    # itself. Only trust wcode's description when it's actually why we alerted.
+    if best_code is not None and (best_code in NEAR_TERM_RAIN_CODES or best_code in NEAR_TERM_STORM_CODES):
+        condition_name = get_wmo_info(best_code, lang)[0]
+    else:
+        condition_name = TRANSLATIONS[lang]["condition_rain_generic"]
     msg_key = "alert_storm_soon" if best_severity == "error" else "alert_rain_soon"
     msg_tpl = TRANSLATIONS[lang][msg_key]
+    # date lets callers tell whether this alert's triggering hour actually falls
+    # on "today" (the lookahead window can cross into tomorrow's first hour).
+    best_date = hourly_data["time"][best_idx][:10] if best_idx is not None else None
     return [{
         "severity": best_severity,
-        "message": msg_tpl.format(condition_name=condition_name, prob=best_prob)
+        "message": msg_tpl.format(condition_name=condition_name, prob=best_prob),
+        "date": best_date
     }]
+
+def near_term_storm_is_today(near_term_alerts: list[dict[str, Any]], daily_data: dict[str, Any] | None) -> bool:
+    """True when a near-term (this/next hour) storm alert's triggering hour actually
+    falls on today's calendar date. The near-term lookahead can cross into tomorrow's
+    first hour (e.g. checked at 23:00), so this can't just be "any near-term error
+    alert" -- get_weather_alerts' skip_today_precip would otherwise wrongly drop a
+    distinct, earlier storm that's genuinely today's own alert."""
+    if not daily_data or not daily_data.get("time"):
+        return False
+    today_date = daily_data["time"][0]
+    return any(
+        alert["severity"] == "error" and alert.get("date") == today_date
+        for alert in near_term_alerts
+    )
 
 def generate_forecast_row_html(
     date_str: str,
@@ -1524,9 +1553,11 @@ def main():
             near_term_alerts = get_near_term_alerts(hourly, upcoming_start_idx, lang=lang) if hourly and "time" in hourly else []
             # A near-term storm already describes today's severe weather -- don't repeat
             # it via the daily lookahead's own "today" entry (see get_weather_alerts' docstring).
-            near_term_has_storm = any(alert["severity"] == "error" for alert in near_term_alerts)
             daily_alerts = (
-                get_weather_alerts(daily, lang=lang, unit=unit, skip_today_precip=near_term_has_storm)
+                get_weather_alerts(
+                    daily, lang=lang, unit=unit,
+                    skip_today_precip=near_term_storm_is_today(near_term_alerts, daily)
+                )
                 if daily and "time" in daily else []
             )
             alerts = near_term_alerts + daily_alerts

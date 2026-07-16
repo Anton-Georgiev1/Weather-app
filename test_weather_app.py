@@ -6,6 +6,7 @@ from Weather_app import (
     safe_get,
     get_weather_alerts,
     get_near_term_alerts,
+    near_term_storm_is_today,
     format_date,
     format_temperature,
     format_wind_speed,
@@ -171,7 +172,9 @@ def test_get_near_term_alerts_storm_code_error():
 
 def test_get_near_term_alerts_probability_only_trigger():
     """A clear weather_code with a high enough precipitation_probability
-    still warns."""
+    still warns, but must not borrow "Clear sky" as the condition text --
+    that would render as the self-contradicting "Clear sky expected...
+    (85% chance of precipitation)"."""
     hourly_data = {
         "time": ["2024-01-01T10:00", "2024-01-01T11:00"],
         "weather_code": [0, 0],
@@ -180,6 +183,8 @@ def test_get_near_term_alerts_probability_only_trigger():
     alerts = get_near_term_alerts(hourly_data, 0)
     assert len(alerts) == 1
     assert alerts[0]["severity"] == "warning"
+    assert "Clear sky" not in alerts[0]["message"]
+    assert "Rain" in alerts[0]["message"]
 
 
 def test_get_near_term_alerts_storm_beats_earlier_warning():
@@ -222,6 +227,47 @@ def test_get_near_term_alerts_empty_data():
     """Missing or empty hourly data yields no alert, no exception."""
     assert get_near_term_alerts({}, 0) == []
     assert get_near_term_alerts(None, 0) == []  # pyright: ignore[reportArgumentType]
+
+
+def test_get_near_term_alerts_date_matches_triggering_hour():
+    """The returned alert's date must be the triggering hour's own date, not
+    always "today" -- this is what lets callers avoid conflating a storm at
+    23:00 today with one at 00:00 tomorrow."""
+    hourly_data = {
+        "time": ["2024-01-01T23:00", "2024-01-02T00:00"],
+        "weather_code": [1, 95],  # storm only in tomorrow's first hour
+        "precipitation_probability": [10, 90]
+    }
+    alerts = get_near_term_alerts(hourly_data, 0)
+    assert len(alerts) == 1
+    assert alerts[0]["date"] == "2024-01-02"
+
+
+def test_near_term_storm_is_today_true_when_triggering_hour_matches_today():
+    near_term_alerts = [{"severity": "error", "message": "x", "date": "2024-01-01"}]
+    daily_data = {"time": ["2024-01-01", "2024-01-02"]}
+    assert near_term_storm_is_today(near_term_alerts, daily_data) is True
+
+
+def test_near_term_storm_is_today_false_across_midnight_boundary():
+    """A near-term storm whose triggering hour is actually tomorrow (e.g.
+    checked at 23:00) must not count as "today's" storm -- otherwise
+    get_weather_alerts would wrongly drop today's own, distinct alert."""
+    near_term_alerts = [{"severity": "error", "message": "x", "date": "2024-01-02"}]
+    daily_data = {"time": ["2024-01-01", "2024-01-02"]}
+    assert near_term_storm_is_today(near_term_alerts, daily_data) is False
+
+
+def test_near_term_storm_is_today_false_when_no_error_severity():
+    near_term_alerts = [{"severity": "warning", "message": "x", "date": "2024-01-01"}]
+    daily_data = {"time": ["2024-01-01"]}
+    assert near_term_storm_is_today(near_term_alerts, daily_data) is False
+
+
+def test_near_term_storm_is_today_false_on_missing_daily_data():
+    near_term_alerts = [{"severity": "error", "message": "x", "date": "2024-01-01"}]
+    assert near_term_storm_is_today(near_term_alerts, {}) is False
+    assert near_term_storm_is_today(near_term_alerts, None) is False
 
 
 def test_format_temperature():
