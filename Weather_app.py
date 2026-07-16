@@ -1,5 +1,4 @@
 import html
-from datetime import datetime
 from typing import Any, Literal
 
 import streamlit as st
@@ -556,13 +555,26 @@ NEAR_TERM_RAIN_PROBABILITY_THRESHOLD = 70
 
 # 7-day forecast card severity tiers, so a stormy day's card stands out from the rest
 # of the row. Thunderstorm-with-hail/severe-thunderstorm get the darker "severe" tier;
-# the rest of NEAR_TERM_STORM_CODES gets the lighter "storm" tier.
+# the rest of NEAR_TERM_STORM_CODES gets the lighter "storm" tier. This split is only
+# for the card's own two-tier display and is intentionally independent of the near-term
+# alert's severity (which treats all of NEAR_TERM_STORM_CODES, including plain
+# thunderstorm/95, as top severity) -- the two lists aren't meant to move in lockstep.
 DAY_CARD_STORM_SEVERE_CODES = {96, 99}
 DAY_CARD_STORM_CODES = NEAR_TERM_STORM_CODES - DAY_CARD_STORM_SEVERE_CODES
 
-def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en", unit: str = "C") -> list[dict[str, Any]]:
+def get_weather_alerts(
+    daily_data: dict[str, Any],
+    lang: str = "en",
+    unit: str = "C",
+    skip_today_precip: bool = False
+) -> list[dict[str, Any]]:
     """Analyze daily data for severe weather or wind alerts, limited to the near term
-    (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting."""
+    (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting.
+
+    skip_today_precip drops today's severe-weather-condition alert (not the wind one):
+    the daily forecast has a single weather_code per day, so when the near-term (this
+    hour/next hour) check has already raised a storm alert, today's entry here would
+    describe that same storm a second time."""
     alerts: list[dict[str, Any]] = []
     if not daily_data or "time" not in daily_data:
         return alerts
@@ -573,7 +585,7 @@ def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en", unit: str =
         wind = safe_get(daily_data, "wind_speed_10m_max", i, 0)
         day_name = format_date(daily_data["time"][i], "%A, %B %d", lang)
 
-        if wcode in [65, 67, 75, 82, 86, 95, 96, 99]:
+        if wcode in [65, 67, 75, 82, 86, 95, 96, 99] and not (i == 0 and skip_today_precip):
             condition_name = get_wmo_info(wcode, lang)[0]
             msg_tpl = TRANSLATIONS[lang]["alert_precip"]
             alerts.append({
@@ -1432,7 +1444,6 @@ def main():
 
         with refresh_button_slot:
             st.button(t["refresh_now_button"], key="refresh_now_button")
-        st.caption(t["last_updated"].format(time=datetime.now().strftime("%H:%M:%S")))
 
         lat, lon = location["latitude"], location["longitude"]
         with st.spinner(t["fetching"]):
@@ -1448,6 +1459,11 @@ def main():
             # Find the first hour that hasn't happened yet -- this anchors both
             # the near-term rain/storm alert check and the 24h strip below.
             current_time: str | None = curr.get("time")
+            # Shown in the location's own local time (Open-Meteo's timezone=auto
+            # response), not the server's clock -- those can differ by hours
+            # depending on which timezone the app happens to be hosted in.
+            if current_time:
+                st.caption(t["last_updated"].format(time=format_date(current_time, "%H:%M", lang)))
             current_hour_key = f"{current_time[:13]}:00" if current_time else None
             upcoming_start_idx = 0
             if current_hour_key and hourly and "time" in hourly:
@@ -1506,7 +1522,13 @@ def main():
             # Near-term (this hour / next hour) alerts come first since they're
             # the most time-critical, ahead of the multi-day lookahead alerts.
             near_term_alerts = get_near_term_alerts(hourly, upcoming_start_idx, lang=lang) if hourly and "time" in hourly else []
-            daily_alerts = get_weather_alerts(daily, lang=lang, unit=unit) if daily and "time" in daily else []
+            # A near-term storm already describes today's severe weather -- don't repeat
+            # it via the daily lookahead's own "today" entry (see get_weather_alerts' docstring).
+            near_term_has_storm = any(alert["severity"] == "error" for alert in near_term_alerts)
+            daily_alerts = (
+                get_weather_alerts(daily, lang=lang, unit=unit, skip_today_precip=near_term_has_storm)
+                if daily and "time" in daily else []
+            )
             alerts = near_term_alerts + daily_alerts
             if alerts:
                 st.divider()

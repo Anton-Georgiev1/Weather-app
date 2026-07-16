@@ -58,6 +58,37 @@ def test_get_weather_alerts_wind_message_converts_to_mph_under_fahrenheit():
     assert "km/h" not in alerts[0]["message"]
 
 
+def test_get_weather_alerts_skip_today_precip_drops_only_todays_condition_alert():
+    """skip_today_precip=True must drop today's severe-condition alert (it's
+    a duplicate of an already-raised near-term alert) but keep today's wind
+    alert and every future day's alerts untouched."""
+    daily_data = {
+        "time": ["2024-01-01", "2024-01-02"],
+        "weather_code": [95, 99],  # both severe
+        "precipitation_probability_max": [80, 90],
+        "wind_speed_10m_max": [60, 10]  # today also has high wind
+    }
+    alerts = get_weather_alerts(daily_data, skip_today_precip=True)
+    assert len(alerts) == 2
+    assert "Wind Advisory" in alerts[0]["message"]  # today's wind alert survives
+    assert "Severe Thunderstorm" in alerts[1]["message"]  # tomorrow's condition alert survives
+    assert not any("Thunderstorm" in a["message"] and "Severe" not in a["message"] for a in alerts)
+
+
+def test_get_weather_alerts_skip_today_precip_false_keeps_default_behavior():
+    """The default (skip_today_precip=False) must be unaffected, so existing
+    callers that don't pass the flag keep seeing today's condition alert."""
+    daily_data = {
+        "time": ["2024-01-01"],
+        "weather_code": [95],
+        "precipitation_probability_max": [80],
+        "wind_speed_10m_max": [10]
+    }
+    alerts = get_weather_alerts(daily_data)
+    assert len(alerts) == 1
+    assert "Thunderstorm" in alerts[0]["message"]
+
+
 def test_get_weather_alerts_none():
     """Test that no alerts are returned for calm weather."""
     daily_data = {
