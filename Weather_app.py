@@ -1,6 +1,6 @@
 import html
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
@@ -8,6 +8,8 @@ import httpx
 import pandas as pd
 from streamlit_geolocation import streamlit_geolocation  # pyright: ignore[reportMissingTypeStubs]
 from streamlit_local_storage import LocalStorage  # pyright: ignore[reportMissingTypeStubs]
+
+AlertSeverity = Literal["warning", "error"]
 
 # --- Configuration ---
 GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -261,6 +263,8 @@ TRANSLATIONS = {
         "alerts_header": "⚠️ Weather Alerts for {city}",
         "alert_precip": "<strong>Alert for {day_name}:</strong> {condition_name} expected! (<strong>{prob}%</strong> chance of precipitation)",
         "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind}</strong>.",
+        "alert_rain_soon": "<strong>Heads up:</strong> {condition_name} expected within the hour (<strong>{prob}%</strong> chance of precipitation).",
+        "alert_storm_soon": "<strong>Storm Warning:</strong> {condition_name} expected within the hour! (<strong>{prob}%</strong> chance of precipitation)",
         "next_24h": "Immediate Next 24 Hours",
         "show_past_hours": "Show hours that already passed",
         "hourly_unavailable": "Hourly data unavailable.",
@@ -288,6 +292,7 @@ TRANSLATIONS = {
         "card_wind": "Wind",
         "card_rain_chance": "Rain chance",
         "severe_weather": "Severe Weather",
+        "weather_advisory": "Weather Advisory",
         "unknown": "Unknown",
 
         # Geolocation strings
@@ -319,6 +324,8 @@ TRANSLATIONS = {
         "alerts_header": "⚠️ Сигнали за времето за {city}",
         "alert_precip": "<strong>Сигнал за {day_name}:</strong> Очаква се {condition_name}! (<strong>{prob}%</strong> шанс за валежи)",
         "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind}</strong>.",
+        "alert_rain_soon": "<strong>Внимание:</strong> Очаква се {condition_name} до един час (<strong>{prob}%</strong> шанс за валежи).",
+        "alert_storm_soon": "<strong>Предупреждение за буря:</strong> Очаква се {condition_name} до един час! (<strong>{prob}%</strong> шанс за валежи)",
         "next_24h": "Следващите 24 часа",
         "show_past_hours": "Покажи изминалите часове",
         "hourly_unavailable": "Часовите данни са ненайдостъпни.",
@@ -346,6 +353,7 @@ TRANSLATIONS = {
         "card_wind": "Вятър",
         "card_rain_chance": "Шанс за валежи",
         "severe_weather": "Опасно време",
+        "weather_advisory": "Предупреждение за времето",
         "unknown": "Неизвестно",
 
         # Geolocation strings
@@ -531,6 +539,17 @@ def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
 
 ALERT_LOOKAHEAD_DAYS = 3
 
+# Near-term (this hour / next hour) rain-vs-storm alert tuning. Open-Meteo's
+# hourly array is our finest resolution (no minutely data is fetched), so
+# "next 30 min" isn't representable -- this checks the current and next
+# hourly slot instead.
+NEAR_TERM_LOOKAHEAD_HOURS = 1
+NEAR_TERM_RAIN_CODES = {51, 53, 55, 56, 57, 61, 63, 66, 80, 81}
+# Same severe-weather codes as the daily alert's precip check (65, 67, 75, 82, 86, 95, 96, 99):
+# thunderstorms, violent/heavy rain, and heavy snow all warrant the storm-tier alert.
+NEAR_TERM_STORM_CODES = {65, 67, 75, 82, 86, 95, 96, 99}
+NEAR_TERM_RAIN_PROBABILITY_THRESHOLD = 70
+
 def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en", unit: str = "C") -> list[dict[str, Any]]:
     """Analyze daily data for severe weather or wind alerts, limited to the near term
     (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting."""
@@ -548,17 +567,59 @@ def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en", unit: str =
             condition_name = get_wmo_info(wcode, lang)[0]
             msg_tpl = TRANSLATIONS[lang]["alert_precip"]
             alerts.append({
-                "type": "error",
+                "severity": "error",
                 "message": msg_tpl.format(day_name=day_name, condition_name=condition_name, prob=prob)
             })
 
         if wind is not None and wind > 50:
             msg_tpl = TRANSLATIONS[lang]["alert_wind"]
             alerts.append({
-                "type": "warning",
+                "severity": "warning",
                 "message": msg_tpl.format(day_name=day_name, wind=format_wind_speed(wind, unit, lang))
             })
     return alerts
+
+def get_near_term_alerts(hourly_data: dict[str, Any], upcoming_start_idx: int, lang: str = "en") -> list[dict[str, Any]]:
+    """Check the current and next hourly forecast slot for rain or storm conditions,
+    escalating to the storm severity when the worse of the two hours is a thunderstorm
+    or heavy/violent precipitation code."""
+    if not hourly_data or "time" not in hourly_data:
+        return []
+
+    severity_rank: dict[AlertSeverity, int] = {"warning": 1, "error": 2}
+    best_rank = 0
+    best_severity: AlertSeverity | None = None
+    best_code: int | None = None
+    best_prob: float | int = 0
+
+    for idx in range(upcoming_start_idx, upcoming_start_idx + NEAR_TERM_LOOKAHEAD_HOURS + 1):
+        wcode = safe_get(hourly_data, "weather_code", idx)
+        prob = safe_get(hourly_data, "precipitation_probability", idx, 0)
+
+        severity: AlertSeverity
+        if wcode in NEAR_TERM_STORM_CODES:
+            severity = "error"
+        elif wcode in NEAR_TERM_RAIN_CODES or prob >= NEAR_TERM_RAIN_PROBABILITY_THRESHOLD:
+            severity = "warning"
+        else:
+            continue
+
+        # Keep the higher-severity hour; on a tie, keep the sooner one
+        # (first match wins) since idx increases with the loop.
+        if severity_rank[severity] <= best_rank:
+            continue
+        best_rank, best_severity, best_code, best_prob = severity_rank[severity], severity, wcode, prob
+
+    if best_severity is None:
+        return []
+
+    condition_name = get_wmo_info(best_code if best_code is not None else -1, lang)[0]
+    msg_key = "alert_storm_soon" if best_severity == "error" else "alert_rain_soon"
+    msg_tpl = TRANSLATIONS[lang][msg_key]
+    return [{
+        "severity": best_severity,
+        "message": msg_tpl.format(condition_name=condition_name, prob=best_prob)
+    }]
 
 def generate_forecast_row_html(
     date_str: str,
@@ -600,10 +661,21 @@ def generate_forecast_row_html(
         "</div>"
     )
 
-def generate_alert_html(icon: str, message: str, lang: str = "en") -> str:
-    """Generate the HTML for a single alert banner, matching the design's `.alert` chip."""
-    title = TRANSLATIONS[lang]["severe_weather"]
-    return f"<div class='alert'><span title='{title}'>{icon}</span><span class='text'>{message}</span></div>"
+def generate_alert_html(message: str, severity: AlertSeverity, lang: str = "en") -> str:
+    """Generate the HTML for a single alert banner, matching the design's `.alert` chip.
+    Severity ("warning" or "error") picks the icon, tooltip title, and the CSS
+    modifier class that makes storm-level alerts read as visibly more urgent."""
+    if severity == "error":
+        icon = "⛈️"
+        title = TRANSLATIONS[lang]["severe_weather"]
+    else:
+        icon = "⚠️"
+        title = TRANSLATIONS[lang]["weather_advisory"]
+    return (
+        f"<div class='alert alert-{severity}'>"
+        f"<span title='{title}'>{icon}</span><span class='text'>{message}</span>"
+        "</div>"
+    )
 
 def generate_hour_card_html(
     date_str: str,
@@ -700,6 +772,11 @@ def get_theme_css(theme: dict[str, str]) -> str:
     --hero-grad: {theme['hero_grad']};
     --accent-shadow: {theme['accent_shadow']};
     --card-shadow: {theme['card_shadow']};
+    --alert-error-bg: color-mix(in srgb, var(--accent-soft) 78%, #c62828 22%);
+    --alert-error-border: color-mix(in srgb, var(--accent-deep) 40%, #c62828 60%);
+    --alert-error-text: color-mix(in srgb, var(--accent-deep) 55%, #3a0a0a 45%);
+    --alert-error-shadow: color-mix(in srgb, var(--accent-shadow) 55%, rgba(198,40,40,.45) 45%);
+    --alert-error-shadow-strong: color-mix(in srgb, var(--accent-shadow) 40%, rgba(198,40,40,.6) 60%);
 }}
 
 html, [data-testid="stAppViewContainer"], .stApp {{
@@ -802,6 +879,25 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .alert {{ display: flex; align-items: center; gap: 10px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 11px 16px; margin-bottom: 8px; }}
 .alert .text {{ font-size: 13.5px; font-weight: 600; color: var(--accent-deep); }}
 .alert span:first-child {{ cursor: help; }}
+
+/* alert-warning intentionally has no rules of its own -- the base .alert
+   styling above is exactly the desired warning-tier look. */
+.alert-error {{
+    background: var(--alert-error-bg);
+    border: 2px solid var(--alert-error-border);
+    padding: 10px 16px;
+    box-shadow: 0 2px 14px var(--alert-error-shadow);
+    animation: alert-pulse 2.6s ease-in-out infinite;
+}}
+.alert-error .text {{ color: var(--alert-error-text); font-weight: 700; font-size: 14px; }}
+
+@keyframes alert-pulse {{
+    0%, 100% {{ box-shadow: 0 2px 14px var(--alert-error-shadow); }}
+    50% {{ box-shadow: 0 2px 22px var(--alert-error-shadow-strong); }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+    .alert-error {{ animation: none; }}
+}}
 
 /* ---------- APP HEADER ---------- */
 .st-key-app_header {{ margin-bottom: 22px; }}
@@ -1215,6 +1311,19 @@ def main():
             daily = f_data.get("daily", {})
             curr = f_data.get("current", {})
 
+            # Hourly data starts at 00:00 of the current day, so index 0 is
+            # usually already in the past by the time the user looks at it.
+            # Find the first hour that hasn't happened yet -- this anchors both
+            # the near-term rain/storm alert check and the 24h strip below.
+            current_time: str | None = curr.get("time")
+            current_hour_key = f"{current_time[:13]}:00" if current_time else None
+            upcoming_start_idx = 0
+            if current_hour_key and hourly and "time" in hourly:
+                for idx, time_str in enumerate(hourly["time"]):
+                    if time_str >= current_hour_key:
+                        upcoming_start_idx = idx
+                        break
+
             # --- Main Screen Location + Hero ---
             # Escaped because this is third-party geocoding/reverse-geocoding data
             # (Open-Meteo / OpenStreetMap Nominatim) rendered via unsafe_allow_html.
@@ -1262,11 +1371,17 @@ def main():
             st.markdown(hero_html, unsafe_allow_html=True)
 
             # --- Alerts Section (only shown when there's an actual alert) ---
-            alerts = get_weather_alerts(daily, lang=lang, unit=unit) if daily and "time" in daily else []
+            # Near-term (this hour / next hour) alerts come first since they're
+            # the most time-critical, ahead of the multi-day lookahead alerts.
+            near_term_alerts = get_near_term_alerts(hourly, upcoming_start_idx, lang=lang) if hourly and "time" in hourly else []
+            daily_alerts = get_weather_alerts(daily, lang=lang, unit=unit) if daily and "time" in daily else []
+            alerts = near_term_alerts + daily_alerts
             if alerts:
                 st.divider()
                 st.subheader(t["alerts_header"].format(city=location['name']))
-                alerts_html = "".join(generate_alert_html("⚠️", alert["message"], lang=lang) for alert in alerts)
+                alerts_html = "".join(
+                    generate_alert_html(alert["message"], alert["severity"], lang=lang) for alert in alerts
+                )
                 st.markdown(alerts_html, unsafe_allow_html=True)
 
             st.divider()
@@ -1274,19 +1389,6 @@ def main():
             # --- Immediate 24h Hourly Track (horizontal scroll strip) ---
             if hourly and "time" in hourly:
                 st.subheader(t["next_24h"])
-
-                # Hourly data starts at 00:00 of the current day, so index 0 is
-                # usually already in the past by the time the user looks at it.
-                # Find the first hour that hasn't happened yet and default the
-                # window to start there instead of showing stale hours first.
-                current_time: str | None = curr.get("time")
-                current_hour_key = f"{current_time[:13]}:00" if current_time else None
-                upcoming_start_idx = 0
-                if current_hour_key:
-                    for idx, time_str in enumerate(hourly["time"]):
-                        if time_str >= current_hour_key:
-                            upcoming_start_idx = idx
-                            break
 
                 if "show_past_hours" not in st.session_state:
                     st.session_state.show_past_hours = False
