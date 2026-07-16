@@ -4,16 +4,21 @@ from Weather_app import (
     get_coordinates,
     get_weather_data,
     safe_get,
-    calculate_daily_average_humidity,
     get_weather_alerts,
-    generate_forecast_card_html,
     format_date,
+    format_temperature,
+    format_wind_speed,
     get_wmo_info,
+    generate_hour_card_html,
+    generate_day_card_html,
+    generate_forecast_row_html,
+    generate_alert_html,
     reverse_geocode,
     build_location_from_coordinates,
     GEOCODING_API_URL,
     WEATHER_API_URL,
-    REVERSE_GEOCODING_API_URL
+    REVERSE_GEOCODING_API_URL,
+    ALERT_LOOKAHEAD_DAYS
 )
 
 # --- Utility Tests ---
@@ -30,6 +35,21 @@ def test_get_weather_alerts():
     assert len(alerts) == 2
     assert "Thunderstorm" in alerts[0]["message"]
     assert "Wind Advisory" in alerts[1]["message"]
+    assert "60 km/h" in alerts[1]["message"]
+
+def test_get_weather_alerts_wind_message_converts_to_mph_under_fahrenheit():
+    """The wind advisory message must switch to mph under the Fahrenheit toggle,
+    not stay locked to km/h regardless of the selected unit."""
+    daily_data = {
+        "time": ["2024-01-01"],
+        "weather_code": [0],
+        "precipitation_probability_max": [0],
+        "wind_speed_10m_max": [60]
+    }
+    alerts = get_weather_alerts(daily_data, unit="F")
+    assert len(alerts) == 1
+    assert "mph" in alerts[0]["message"]
+    assert "km/h" not in alerts[0]["message"]
 
 def test_get_weather_alerts_none():
     """Test that no alerts are returned for calm weather."""
@@ -41,35 +61,90 @@ def test_get_weather_alerts_none():
     }
     assert get_weather_alerts(daily_data) == []
 
-def test_generate_forecast_card_html_smoke():
-    """Smoke test for HTML generation to ensure no crashes."""
-    html = generate_forecast_card_html(
-        "2024-01-01T12:00", 0, 10, wind=5, humidity=50, max_t=20, min_t=10
-    )
-    assert "forecast-card" in html
-    assert "Clear sky" in html
-    assert "20°" in html
+def test_get_weather_alerts_respects_lookahead_days():
+    """Alerts only look ALERT_LOOKAHEAD_DAYS ahead: a severe day on the last day
+    inside the window must trigger, and the same day one slot later must not."""
+    time_series = [f"2024-01-{day:02d}" for day in range(1, ALERT_LOOKAHEAD_DAYS + 2)]
 
-def test_calculate_daily_average_humidity():
-    """Test average calculation for complete and partial days."""
-    # 24 hours of 50% humidity, followed by 24 hours of 60% humidity.
-    # list[float] vs list[float | None] is a list-invariance stub limitation, not a real bug
-    # (see the matching note in safe_get in Weather_app.py).
-    data: list[float | None] = [50.0] * 24 + [60.0] * 24  # pyright: ignore[reportAssignmentType]
-    result = calculate_daily_average_humidity(data)
-    assert result == [50.0, 60.0]
+    weather_code_inside_window = [0] * (ALERT_LOOKAHEAD_DAYS + 1)
+    weather_code_inside_window[ALERT_LOOKAHEAD_DAYS - 1] = 95  # last day inside the window
+    daily_data_inside = {
+        "time": time_series,
+        "weather_code": weather_code_inside_window,
+        "precipitation_probability_max": [80] * (ALERT_LOOKAHEAD_DAYS + 1),
+        "wind_speed_10m_max": [0] * (ALERT_LOOKAHEAD_DAYS + 1)
+    }
+    assert len(get_weather_alerts(daily_data_inside)) == 1
 
-def test_calculate_daily_average_humidity_with_nones():
-    """Test average calculation with missing values."""
-    # First day has two 50s and the rest Nones: Average should be 50.0
-    data = [50.0, None, 50.0] + [None] * 21 
-    result = calculate_daily_average_humidity(data)
-    assert result == [50.0]
+    weather_code_outside_window = [0] * (ALERT_LOOKAHEAD_DAYS + 1)
+    weather_code_outside_window[ALERT_LOOKAHEAD_DAYS] = 95  # first day outside the window
+    daily_data_outside = {
+        "time": time_series,
+        "weather_code": weather_code_outside_window,
+        "precipitation_probability_max": [80] * (ALERT_LOOKAHEAD_DAYS + 1),
+        "wind_speed_10m_max": [0] * (ALERT_LOOKAHEAD_DAYS + 1)
+    }
+    assert get_weather_alerts(daily_data_outside) == []
 
-def test_calculate_daily_average_humidity_empty():
-    """Test average calculation with empty or all-None data."""
-    assert calculate_daily_average_humidity([]) == []
-    assert calculate_daily_average_humidity([None] * 24) == [None]
+def test_format_temperature():
+    """Test Celsius passthrough, Fahrenheit conversion, and missing-value fallback."""
+    assert format_temperature(20.0, "C") == "20.0°C"
+    assert format_temperature(20.0, "F") == "68.0°F"
+    assert format_temperature(None, "C") == "--°C"
+    assert format_temperature(None, "F") == "--°F"
+
+def test_format_wind_speed():
+    """Test km/h passthrough (localized unit label), mph conversion under the
+    Fahrenheit toggle, and missing-value fallback."""
+    assert format_wind_speed(10.0, "C", "en") == "10.0 km/h"
+    assert format_wind_speed(10.0, "C", "bg") == "10.0 км/ч"
+    assert format_wind_speed(10.0, "F") == "6.2 mph"
+    assert format_wind_speed(None, "C", "en") == "-- km/h"
+    assert format_wind_speed(None, "F") == "-- mph"
+
+def test_generate_hour_card_html_smoke():
+    """Smoke test for the 24h-strip hour card, including the weather-icon tooltip."""
+    result = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0)
+    assert "hour-card" in result
+    assert "title='Clear sky'" in result
+    assert "20.0°C" in result
+
+def test_generate_day_card_html_smoke():
+    """Smoke test for the 7-day card, including the rain/wind tooltip text."""
+    result = generate_day_card_html("2024-01-01", 0, 10, wind=15.0, max_t=20.0, min_t=10.0)
+    assert "day-card" in result
+    assert "title='Rain chance'" in result
+    assert "title='Wind'" in result
+
+def test_generate_day_card_html_wind_converts_to_mph_under_fahrenheit():
+    """Wind speed must follow the temperature unit toggle, not stay locked to km/h."""
+    result_metric = generate_day_card_html("2024-01-01", 0, 10, wind=16.0934, max_t=20.0, min_t=10.0, unit="C")
+    assert "💨 16<" in result_metric
+
+    result_imperial = generate_day_card_html("2024-01-01", 0, 10, wind=16.0934, max_t=20.0, min_t=10.0, unit="F")
+    assert "💨 10<" in result_imperial  # 16.0934 km/h ≈ 10 mph
+
+def test_generate_forecast_row_html_smoke():
+    """Smoke test for the 14-day compact row, including the rain/wind tooltip text."""
+    result = generate_forecast_row_html("2024-01-01", 0, 10, wind=15.0, max_t=20.0, min_t=10.0)
+    assert "row-14" in result
+    assert "title='Rain chance'" in result
+    assert "title='Wind'" in result
+
+def test_generate_forecast_row_html_wind_converts_to_mph_under_fahrenheit():
+    """Wind speed in the 14-day row must switch to mph under the Fahrenheit toggle."""
+    result = generate_forecast_row_html("2024-01-01", 0, 10, wind=16.0934, max_t=20.0, min_t=10.0, unit="F")
+    assert "10.0 mph" in result  # 16.0934 km/h ≈ 10 mph
+
+def test_generate_alert_html():
+    """Test the alert banner carries the icon, message, and a localized tooltip."""
+    result = generate_alert_html("⚠️", "Storm incoming", lang="en")
+    assert "⚠️" in result
+    assert "Storm incoming" in result
+    assert "title='Severe Weather'" in result
+
+    result_bg = generate_alert_html("⚠️", "Идва буря", lang="bg")
+    assert "title='Опасно време'" in result_bg
 
 def test_safe_get_valid():
     """Test safe_get with valid data and index."""
@@ -152,17 +227,6 @@ def test_get_weather_alerts_bg():
     assert "Предупреждение за вятър" in alerts[1]["message"]
     assert "85%" in alerts[0]["message"]
     assert "55 км/ч" in alerts[1]["message"]
-
-def test_generate_forecast_card_html_bg():
-    """Test Bulgarian HTML card generation."""
-    html = generate_forecast_card_html(
-        "2024-06-01T12:00", 0, 15, wind=12.5, humidity=65, max_t=25.4, min_t=14.2, lang="bg"
-    )
-    assert "Събота" in html
-    assert "Юни" in html
-    assert "Ясно небе" in html
-    assert "Влаж.: 65%" in html
-    assert "Вятър: 12.5 км/ч" in html
 
 # --- Geocoding Tests ---
 
@@ -342,6 +406,15 @@ def test_reverse_geocode_missing_country(httpx_mock):
     result = reverse_geocode(42.6975, 23.3241)
     assert result is None
 
+def test_reverse_geocode_rural_coordinates_keep_known_country(httpx_mock):
+    """Rural coordinates can resolve to a country with no city/town/village/county;
+    the known country must still be surfaced instead of being discarded entirely."""
+    mock_response = {"address": {"country": "France"}}
+    httpx_mock.add_response(json=mock_response)
+
+    result = reverse_geocode(46.6, 2.5)
+    assert result == {"name": "", "country": "France"}
+
 def test_reverse_geocode_no_address(httpx_mock):
     """Test behavior when coordinates resolve to no address data (e.g. open ocean)."""
     httpx_mock.add_response(json={})
@@ -366,6 +439,16 @@ def test_build_location_from_coordinates_success(httpx_mock):
         "latitude": 42.6975,
         "longitude": 23.3241
     }
+
+def test_build_location_from_coordinates_rural_keeps_known_country(httpx_mock):
+    """Rural coordinates with a known country but no city/town/village/county must show
+    the generic place name alongside the real country, not lose the country entirely."""
+    mock_response = {"address": {"country": "France"}}
+    httpx_mock.add_response(json=mock_response)
+
+    location = build_location_from_coordinates(46.6, 2.5, lang="en")
+    assert location["name"] == "Your Current Location"
+    assert location["country"] == "France"
 
 def test_build_location_from_coordinates_fallback(httpx_mock):
     """Test the generic fallback location when reverse geocoding fails."""

@@ -252,22 +252,14 @@ MONTHS_BG = {
 TRANSLATIONS = {
     "en": {
         "page_title": "Weather App",
-        "app_title": "Weather App Dashboard 🌤️",
         "city_label": "City",
         "city_placeholder": "Enter city name...",
         "country_label": "Country (Optional)",
         "country_placeholder": "Enter country name...",
         "fetching": "Fetching weather data...",
-        "current_temp": "Current Temp",
-        "real_feel": "Real Feel",
-        "max_temp": "Max Temp",
-        "min_temp": "Min Temp",
-        "wind_speed": "Wind Speed",
-        "humidity": "Humidity",
-        "rain_chance_today": "Rain Chance Today",
         "alerts_header": "⚠️ Weather Alerts for {city}",
         "alert_precip": "<strong>Alert for {day_name}:</strong> {condition_name} expected! (<strong>{prob}%</strong> chance of precipitation)",
-        "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind} km/h</strong>.",
+        "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind}</strong>.",
         "next_24h": "Immediate Next 24 Hours",
         "show_past_hours": "Show hours that already passed",
         "hourly_unavailable": "Hourly data unavailable.",
@@ -315,22 +307,14 @@ TRANSLATIONS = {
     },
     "bg": {
         "page_title": "Приложение за времето",
-        "app_title": "Табло за времето 🌤️",
         "city_label": "Град",
         "city_placeholder": "Въведете име на град...",
         "country_label": "Държава (По избор)",
         "country_placeholder": "Въведете име на държава...",
         "fetching": "Извличане на данни за времето...",
-        "current_temp": "Текуща темп.",
-        "real_feel": "Усеща се като",
-        "max_temp": "Макс. темп.",
-        "min_temp": "Мин. темп.",
-        "wind_speed": "Скорост на вятъра",
-        "humidity": "Влажност",
-        "rain_chance_today": "Шанс за дъжд днес",
         "alerts_header": "⚠️ Сигнали за времето за {city}",
         "alert_precip": "<strong>Сигнал за {day_name}:</strong> Очаква се {condition_name}! (<strong>{prob}%</strong> шанс за валежи)",
-        "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind} км/ч</strong>.",
+        "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind}</strong>.",
         "next_24h": "Следващите 24 часа",
         "show_past_hours": "Покажи изминалите часове",
         "hourly_unavailable": "Часовите данни са ненайдостъпни.",
@@ -423,6 +407,15 @@ def format_temperature(value_celsius: float | None, unit: str) -> str:
     display_value = value_celsius * 9 / 5 + 32 if unit == "F" else value_celsius
     return f"{round(display_value, 1)}°{unit}"
 
+def format_wind_speed(speed_kmh: float | None, unit: str, lang: str = "en") -> str:
+    """Format a km/h wind reading for display, converting to mph when the
+    Fahrenheit (imperial) unit is selected so wind stays consistent with temperature."""
+    wind_unit = "mph" if unit == "F" else ("km/h" if lang == "en" else "км/ч")
+    if speed_kmh is None:
+        return f"-- {wind_unit}"
+    display_value = speed_kmh * 0.621371 if unit == "F" else speed_kmh
+    return f"{round(display_value, 1)} {wind_unit}"
+
 def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any = None) -> Any:
     """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
     if not isinstance(data_dict, dict):
@@ -468,9 +461,11 @@ def reverse_geocode(lat: float, lon: float, lang: str = "en") -> dict[str, str] 
         address = data.get("address", {})
         name = address.get("city") or address.get("town") or address.get("village") or address.get("county")
         country = address.get("country")
-        if not name or not country:
+        if not country:
             return None
-        return {"name": name, "country": country}
+        # Rural coordinates can resolve to a country with no city/town/village/county;
+        # still surface the known country rather than discarding it entirely.
+        return {"name": name or "", "country": country}
     except Exception:
         return None
 
@@ -478,7 +473,8 @@ def build_location_from_coordinates(lat: float, lon: float, lang: str = "en") ->
     """Build a location dict (matching get_coordinates' shape) directly from browser-provided coordinates."""
     resolved = reverse_geocode(lat, lon, lang)
     if resolved:
-        return {"name": resolved["name"], "country": resolved["country"], "latitude": lat, "longitude": lon}
+        display_name = resolved["name"] or TRANSLATIONS[lang]["geo_header_generic"]
+        return {"name": display_name, "country": resolved["country"], "latitude": lat, "longitude": lon}
     return {"name": TRANSLATIONS[lang]["geo_header_generic"], "country": "", "latitude": lat, "longitude": lon}
 
 def load_last_location(local_storage: LocalStorage) -> dict[str, str]:
@@ -526,19 +522,9 @@ def get_weather_data(lat: float, lon: float) -> dict[str, Any] | None:
     except Exception:
         return None
 
-def calculate_daily_average_humidity(hourly_hum_data: list[float | None]) -> list[float | None]:
-    """Calculate daily average humidity from hourly data (24-hour chunks)."""
-    daily_hum_list: list[float | None] = []
-    if not hourly_hum_data:
-        return []
-    for i in range(0, len(hourly_hum_data), 24):
-        chunk = [x for x in hourly_hum_data[i:i+24] if x is not None]
-        daily_hum_list.append(sum(chunk) / len(chunk) if chunk else None)
-    return daily_hum_list
-
 ALERT_LOOKAHEAD_DAYS = 3
 
-def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en") -> list[dict[str, Any]]:
+def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en", unit: str = "C") -> list[dict[str, Any]]:
     """Analyze daily data for severe weather or wind alerts, limited to the near term
     (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting."""
     alerts: list[dict[str, Any]] = []
@@ -563,89 +549,9 @@ def get_weather_alerts(daily_data: dict[str, Any], lang: str = "en") -> list[dic
             msg_tpl = TRANSLATIONS[lang]["alert_wind"]
             alerts.append({
                 "type": "warning",
-                "message": msg_tpl.format(day_name=day_name, wind=wind)
+                "message": msg_tpl.format(day_name=day_name, wind=format_wind_speed(wind, unit, lang))
             })
     return alerts
-
-def generate_forecast_card_html(
-    date_str: str,
-    code: int | None,
-    rain_prob: float | int | str | None,
-    wind: float | None = None,
-    humidity: float | None = None,
-    max_t: float | None = None,
-    min_t: float | None = None,
-    app_max: float | None = None,
-    app_min: float | None = None,
-    hour_t: float | None = None,
-    hour_app: float | None = None,
-    is_hourly: bool = False,
-    lang: str = "en",
-    unit: str = "C"
-) -> str:
-    """Generate the HTML for a forecast card."""
-    try:
-        label = format_date(date_str, "%H:00" if is_hourly else "%A, %d %b", lang)
-    except Exception:
-        label = TRANSLATIONS[lang]["unknown"]
-
-    resolved_code = code if code is not None else -1
-    desc, emoji = get_wmo_info(resolved_code, lang)
-
-    desc_class = ""
-    if resolved_code == 96:
-        desc_class = "desc-hail"
-    elif resolved_code in [95, 99]:
-        desc_class = "desc-thunderstorm"
-
-    try:
-        rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
-    except (ValueError, TypeError):
-        rain_prob_val = 0
-
-    card_bg_class = "rain-bg" if rain_prob_val > 30 else ""
-    rain_text_class = "high-prob" if rain_prob_val > 20 else ""
-
-    t = TRANSLATIONS[lang]
-
-    wind_unit = "km/h" if lang == "en" else "км/ч"
-    wind_str = f"{round(wind, 1)} {wind_unit}" if wind is not None else f"-- {wind_unit}"
-    humidity_str = f"{int(humidity)}%" if humidity is not None else "--%"
-    max_t_str = format_temperature(max_t, unit)
-    min_t_str = format_temperature(min_t, unit)
-
-    if is_hourly:
-        hour_t_str = format_temperature(hour_t, unit)
-        hour_app_str = format_temperature(hour_app, unit)
-        temp_html = (
-            f"<div class='temp-primary'>{t['card_current_temp']}: {hour_t_str}</div>"
-            f"<div class='temp-secondary mb-small'>{t['card_feels_like']} {hour_app_str}</div>"
-            f"<div class='temp-tertiary'>{t['card_day_max']}: {max_t_str}</div>"
-            f"<div class='temp-tertiary mb-small'>{t['card_day_min']}: {min_t_str}</div>"
-        )
-    else:
-        app_max_str = format_temperature(app_max, unit)
-        app_min_str = format_temperature(app_min, unit)
-        temp_html = (
-            f"<div class='temp-primary'>{t['card_max']}: {max_t_str}</div>"
-            f"<div class='temp-secondary'>{t['card_feels_like']} {app_max_str}</div>"
-            f"<div class='temp-primary mt-small'>{t['card_min']}: {min_t_str}</div>"
-            f"<div class='temp-secondary mb-small'>{t['card_feels_like']} {app_min_str}</div>"
-        )
-
-    return (
-        f"<div class='forecast-card {card_bg_class}'>"
-        f"<div class='forecast-time'>{label}</div>"
-        f"<div class='forecast-emoji' title='{desc}'>{emoji}</div>"
-        f"<div class='forecast-desc {desc_class}'>{desc}</div>"
-        f"{temp_html}"
-        f"<div class='forecast-divider'>"
-        f"<div class='forecast-extra'>{t['card_hum']}: {humidity_str}</div>"
-        f"<div class='forecast-extra'>{t['card_wind']}: {wind_str}</div>"
-        f"<div class='forecast-rain {rain_text_class}'>{t['card_rain_chance']}: {rain_prob_val}%</div>"
-        f"</div>"
-        f"</div>"
-    )
 
 def generate_forecast_row_html(
     date_str: str,
@@ -672,8 +578,7 @@ def generate_forecast_row_html(
     except (ValueError, TypeError):
         rain_prob_val = 0
 
-    wind_unit = "km/h" if lang == "en" else "км/ч"
-    wind_str = f"{round(wind, 1)} {wind_unit}" if wind is not None else f"-- {wind_unit}"
+    wind_str = format_wind_speed(wind, unit, lang)
     max_t_str = format_temperature(max_t, unit)
     min_t_str = format_temperature(min_t, unit)
 
@@ -751,7 +656,10 @@ def generate_day_card_html(
     except (ValueError, TypeError):
         rain_prob_val = 0
 
-    wind_val = round(wind) if wind is not None else "--"
+    if wind is not None:
+        wind_val = round(wind * 0.621371) if unit == "F" else round(wind)
+    else:
+        wind_val = "--"
     max_t_str = format_temperature(max_t, unit)
     min_t_str = format_temperature(min_t, unit)
 
@@ -991,30 +899,6 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .st-key-forecast_tab7 .stButton button {{
     margin-top: 8px; height: 32px !important; min-height: 32px !important; font-size: 11.5px !important;
 }}
-
-/* ---------- CUSTOM FORECAST CARD ---------- */
-.forecast-card {{
-    text-align: center; padding: 16px 14px; border-radius: 14px;
-    border: 1px solid var(--border); background: var(--surface);
-    margin: 6px 0; box-shadow: 0 2px 10px var(--card-shadow);
-    transition: transform .15s ease, box-shadow .15s ease;
-}}
-.forecast-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
-.forecast-card.rain-bg {{ background: var(--accent-soft); }}
-.forecast-time {{ font-weight: 700; font-size: 1.05em; margin-bottom: 5px; color: var(--text); }}
-.forecast-emoji {{ font-size: 2.6em; line-height: 1.2; margin-bottom: 0; cursor: help; }}
-.forecast-desc {{ font-size: .95em; font-weight: 700; color: var(--accent-deep); margin-bottom: 10px; }}
-.forecast-desc.desc-thunderstorm {{ color: #b8860b; }}
-.forecast-desc.desc-hail {{ color: #b5432b; }}
-.temp-primary {{ font-size: 1.05em; font-weight: 700; color: var(--text); }}
-.temp-secondary {{ font-size: .82em; opacity: .7; color: var(--text); }}
-.temp-tertiary {{ font-size: .88em; font-weight: 600; opacity: .85; color: var(--text); }}
-.mt-small {{ margin-top: 8px; }}
-.mb-small {{ margin-bottom: 8px; }}
-.forecast-divider {{ margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }}
-.forecast-extra {{ font-size: .82em; opacity: .7; color: var(--text); }}
-.forecast-rain {{ font-size: .92em; font-weight: 600; margin-top: 8px; color: var(--text); }}
-.forecast-rain.high-prob {{ color: var(--accent-deep); }}
 
 /* ---------- 14-DAY COMPACT ROWS ---------- */
 .st-key-forecast_tab14 {{
@@ -1301,9 +1185,8 @@ def main():
                     current_desc, current_emoji = get_wmo_info(
                         current_code if current_code is not None else -1, lang
                     )
-                    wind_unit = "km/h" if lang == "en" else "км/ч"
                     wind_speed_val = curr.get("wind_speed_10m")
-                    wind_str = f"{wind_speed_val} {wind_unit}" if wind_speed_val is not None else f"-- {wind_unit}"
+                    wind_str = format_wind_speed(wind_speed_val, unit, lang)
                     humidity_val = curr.get("relative_humidity_2m")
                     humidity_str = f"{humidity_val}%" if humidity_val is not None else "--%"
                     rain_chance_val = safe_get(daily, "precipitation_probability_max", 0)
@@ -1331,7 +1214,7 @@ def main():
                     st.markdown(hero_html, unsafe_allow_html=True)
 
                     # --- Alerts Section (only shown when there's an actual alert) ---
-                    alerts = get_weather_alerts(daily, lang=lang) if daily and "time" in daily else []
+                    alerts = get_weather_alerts(daily, lang=lang, unit=unit) if daily and "time" in daily else []
                     if alerts:
                         st.divider()
                         st.subheader(t["alerts_header"].format(city=location['name']))
