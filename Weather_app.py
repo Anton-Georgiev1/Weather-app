@@ -631,7 +631,7 @@ def generate_forecast_card_html(
     return (
         f"<div class='forecast-card {card_bg_class}'>"
         f"<div class='forecast-time'>{label}</div>"
-        f"<div class='forecast-emoji'>{emoji}</div>"
+        f"<div class='forecast-emoji' title='{desc}'>{emoji}</div>"
         f"<div class='forecast-desc {desc_class}'>{desc}</div>"
         f"{temp_html}"
         f"<div class='forecast-divider'>"
@@ -660,6 +660,7 @@ def generate_forecast_row_html(
 
     resolved_code = code if code is not None else -1
     desc, emoji = get_wmo_info(resolved_code, lang)
+    t = TRANSLATIONS[lang]
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -674,17 +675,18 @@ def generate_forecast_row_html(
     return (
         "<div class='row-14'>"
         f"<div class='day'>{label}</div>"
-        f"<div class='emoji'>{emoji}</div>"
+        f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='desc'>{desc}</div>"
         f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
-        f"<div class='rain'>💧 {rain_prob_val}%</div>"
-        f"<div class='wind'>💨 {wind_str}</div>"
+        f"<div class='rain' title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</div>"
+        f"<div class='wind' title='{t['card_wind']}'>💨 {wind_str}</div>"
         "</div>"
     )
 
-def generate_alert_html(icon: str, message: str) -> str:
+def generate_alert_html(icon: str, message: str, lang: str = "en") -> str:
     """Generate the HTML for a single alert banner, matching the design's `.alert` chip."""
-    return f"<div class='alert'><span>{icon}</span><span class='text'>{message}</span></div>"
+    title = TRANSLATIONS[lang]["severe_weather"]
+    return f"<div class='alert'><span title='{title}'>{icon}</span><span class='text'>{message}</span></div>"
 
 def generate_hour_card_html(
     date_str: str,
@@ -701,7 +703,7 @@ def generate_hour_card_html(
         label = TRANSLATIONS[lang]["unknown"]
 
     resolved_code = code if code is not None else -1
-    _desc, emoji = get_wmo_info(resolved_code, lang)
+    desc, emoji = get_wmo_info(resolved_code, lang)
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -713,7 +715,7 @@ def generate_hour_card_html(
     return (
         "<div class='hour-card'>"
         f"<div class='time'>{label}</div>"
-        f"<div class='emoji'>{emoji}</div>"
+        f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='temp'>{temp_str}</div>"
         f"<div class='rain'>{rain_prob_val}%</div>"
         "</div>"
@@ -737,6 +739,7 @@ def generate_day_card_html(
 
     resolved_code = code if code is not None else -1
     desc, emoji = get_wmo_info(resolved_code, lang)
+    t = TRANSLATIONS[lang]
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -750,12 +753,12 @@ def generate_day_card_html(
     return (
         "<div class='day-card'>"
         f"<div class='day'>{label}</div>"
-        f"<div class='emoji'>{emoji}</div>"
+        f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='desc'>{desc}</div>"
         f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
         "<div class='meta'>"
-        f"<span>💧 {rain_prob_val}%</span>"
-        f"<span>💨 {wind_val}</span>"
+        f"<span title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</span>"
+        f"<span title='{t['card_wind']}'>💨 {wind_val}</span>"
         "</div>"
         "</div>"
     )
@@ -881,6 +884,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 }}
 .alert {{ display: flex; align-items: center; gap: 10px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 11px 16px; margin-bottom: 8px; }}
 .alert .text {{ font-size: 13.5px; font-weight: 600; color: var(--accent-deep); }}
+.alert span:first-child {{ cursor: help; }}
 
 /* ---------- APP HEADER ---------- */
 .st-key-app_header {{ margin-bottom: 22px; }}
@@ -901,7 +905,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .brand-icon {{
     width: 44px; height: 44px; border-radius: 12px; background: var(--accent-grad);
     display: flex; align-items: center; justify-content: center; font-size: 22px;
-    box-shadow: 0 4px 14px var(--accent-shadow); flex-shrink: 0;
+    box-shadow: 0 4px 14px var(--accent-shadow); flex-shrink: 0; cursor: help;
 }}
 .brand-title {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 21px; letter-spacing: -.01em; color: var(--text); }}
 .brand-sub {{ font-size: 12.5px; opacity: .55; font-weight: 500; color: var(--text); }}
@@ -940,6 +944,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 
 /* ---------- LOCATION LINE ---------- */
 .location {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }}
+.location span:first-child {{ cursor: help; }}
 .location .name {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 19px; color: var(--text); }}
 
 /* ---------- HERO PANEL ---------- */
@@ -950,7 +955,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 }}
 @media (max-width: 760px) {{ .hero {{ grid-template-columns: 1fr; }} }}
 .hero-main {{ display: flex; align-items: center; gap: 16px; }}
-.hero-emoji {{ font-size: 56px; line-height: 1; }}
+.hero-emoji {{ font-size: 56px; line-height: 1; cursor: help; }}
 .hero-temp {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; color: var(--text); }}
 .hero-feels {{ font-size: 13px; opacity: .65; font-weight: 500; margin-top: 4px; color: var(--text); }}
 .hero-desc {{ font-size: 13.5px; font-weight: 700; color: var(--accent-deep); margin-top: 2px; }}
@@ -963,7 +968,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-strip {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }}
 .hour-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
 .hour-card .time {{ font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; color: var(--text); }}
-.hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; }}
+.hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; cursor: help; }}
 .hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
 .hour-card .rain {{ font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 2px; color: var(--text); }}
 
@@ -972,11 +977,12 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .day-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; }}
 .day-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
 .day-card .day {{ font-size: 12.5px; font-weight: 700; margin-bottom: 6px; color: var(--text); }}
-.day-card .emoji {{ font-size: 32px; margin-bottom: 6px; }}
+.day-card .emoji {{ font-size: 32px; margin-bottom: 6px; cursor: help; }}
 .day-card .desc {{ font-size: 11.5px; font-weight: 600; color: var(--accent-deep); margin-bottom: 10px; min-height: 14px; }}
 .day-card .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
 .day-card .temps .min {{ opacity: .45; font-weight: 600; }}
 .day-card .meta {{ display: flex; justify-content: center; gap: 10px; font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; color: var(--text); }}
+.day-card .meta span {{ cursor: help; }}
 .st-key-forecast_tab7 .stButton button {{
     margin-top: 8px; height: 32px !important; min-height: 32px !important; font-size: 11.5px !important;
 }}
@@ -991,7 +997,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .forecast-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
 .forecast-card.rain-bg {{ background: var(--accent-soft); }}
 .forecast-time {{ font-weight: 700; font-size: 1.05em; margin-bottom: 5px; color: var(--text); }}
-.forecast-emoji {{ font-size: 2.6em; line-height: 1.2; margin-bottom: 0; }}
+.forecast-emoji {{ font-size: 2.6em; line-height: 1.2; margin-bottom: 0; cursor: help; }}
 .forecast-desc {{ font-size: .95em; font-weight: 700; color: var(--accent-deep); margin-bottom: 10px; }}
 .forecast-desc.desc-thunderstorm {{ color: #b8860b; }}
 .forecast-desc.desc-hail {{ color: #b5432b; }}
@@ -1014,11 +1020,11 @@ html, [data-testid="stAppViewContainer"], .stApp {{
     gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border);
 }}
 .row-14 .day {{ font-size: 12.5px; font-weight: 700; color: var(--text); }}
-.row-14 .emoji {{ font-size: 20px; }}
+.row-14 .emoji {{ font-size: 20px; cursor: help; }}
 .row-14 .desc {{ font-size: 12.5px; font-weight: 600; opacity: .75; color: var(--text); }}
 .row-14 .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 13.5px; text-align: right; color: var(--text); }}
 .row-14 .temps .min {{ opacity: .45; font-weight: 600; }}
-.row-14 .rain, .row-14 .wind {{ font-size: 11.5px; opacity: .6; font-weight: 600; text-align: right; color: var(--text); }}
+.row-14 .rain, .row-14 .wind {{ font-size: 11.5px; opacity: .6; font-weight: 600; text-align: right; color: var(--text); cursor: help; }}
 .st-key-forecast_tab14 .stButton button {{
     height: 32px !important; min-height: 32px !important; padding: 0 10px !important; font-size: 11.5px !important;
 }}
@@ -1073,7 +1079,7 @@ def main():
         with col_brand:
             brand_html = (
                 "<div class='brand-row'>"
-                f"<div class='brand-icon'>{theme['emoji']}</div>"
+                f"<div class='brand-icon' title='{theme[f'label_{current_lang}']}'>{theme['emoji']}</div>"
                 "<div>"
                 f"<div class='brand-title'>{t['brand_title']}</div>"
                 f"<div class='brand-sub'>{t['brand_sub']}</div>"
@@ -1090,6 +1096,10 @@ def main():
 
             with col_season_swatches:
                 season_keys = list(SEASON_THEMES.keys())
+                season_legend = " · ".join(
+                    f"{SEASON_THEMES[key]['emoji']} {SEASON_THEMES[key][f'label_{current_lang}']}"
+                    for key in season_keys
+                )
                 selected_season = st.segmented_control(
                     label=t["season_label"],
                     options=season_keys,
@@ -1097,7 +1107,8 @@ def main():
                     default=current_season,
                     required=True,
                     key="season_selector",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    help=season_legend
                 )
 
             with col_lang:
@@ -1275,7 +1286,7 @@ def main():
                     if location.get("country"):
                         location_label += f", {location['country']}"
                     st.markdown(
-                        f"<div class='location'><span>📍</span><span class='name'>{location_label}</span></div>",
+                        f"<div class='location'><span title='{t['geo_header_generic']}'>📍</span><span class='name'>{location_label}</span></div>",
                         unsafe_allow_html=True
                     )
 
@@ -1297,7 +1308,7 @@ def main():
                     hero_html = (
                         "<div class='hero'>"
                         "<div class='hero-main'>"
-                        f"<div class='hero-emoji'>{current_emoji}</div>"
+                        f"<div class='hero-emoji' title='{current_desc}'>{current_emoji}</div>"
                         "<div>"
                         f"<div class='hero-temp'>{format_temperature(curr.get('temperature_2m'), unit)}</div>"
                         f"<div class='hero-feels'>{t['card_feels_like']} {format_temperature(curr.get('apparent_temperature'), unit)}</div>"
@@ -1320,7 +1331,7 @@ def main():
                     if alerts:
                         st.divider()
                         st.subheader(t["alerts_header"].format(city=location['name']))
-                        alerts_html = "".join(generate_alert_html("⚠️", alert["message"]) for alert in alerts)
+                        alerts_html = "".join(generate_alert_html("⚠️", alert["message"], lang=lang) for alert in alerts)
                         st.markdown(alerts_html, unsafe_allow_html=True)
 
                     st.divider()
