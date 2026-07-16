@@ -1,3 +1,4 @@
+import html
 from typing import Any
 
 import streamlit as st
@@ -383,6 +384,10 @@ def format_date(date_input: str, format_str: str, lang: str) -> str:
         # parameter; the resolved return type here is still the correct Timestamp.
         dt = pd.to_datetime(date_input)  # pyright: ignore[reportUnknownMemberType]
     except Exception:
+        return str(date_input)
+
+    # to_datetime doesn't raise for None/"" — it returns NaT, whose strftime() raises.
+    if pd.isna(dt):  # pyright: ignore[reportUnknownMemberType]
         return str(date_input)
 
     if lang == "bg":
@@ -1190,13 +1195,10 @@ def main():
 
             if geo_lat is not None and geo_lon is not None:
                 current_coords = (geo_lat, geo_lon)
-                # The component keeps returning the same last-known reading on every rerun, so
-                # also re-trigger when the user has since switched to manual entry (location_source
-                # != "geo") even if the browser hands back identical coordinates as before.
-                is_new_geo_request = (
-                    current_coords != st.session_state.geo_processed_coords
-                    or st.session_state.location_source != "geo"
-                )
+                # The component keeps returning the same last-known reading on every rerun
+                # (it only sends a new value once the user clicks it again), so a plain
+                # coordinate comparison is what tells a fresh click apart from that replay.
+                is_new_geo_request = current_coords != st.session_state.geo_processed_coords
                 if is_new_geo_request:
                     st.session_state.geo_processed_coords = current_coords
                     resolved_location = build_location_from_coordinates(geo_lat, geo_lon, lang)
@@ -1282,9 +1284,11 @@ def main():
                     curr = f_data.get("current", {})
 
                     # --- Main Screen Location + Hero ---
-                    location_label = location["name"]
+                    # Escaped because this is third-party geocoding/reverse-geocoding data
+                    # (Open-Meteo / OpenStreetMap Nominatim) rendered via unsafe_allow_html.
+                    location_label = html.escape(location["name"])
                     if location.get("country"):
-                        location_label += f", {location['country']}"
+                        location_label += f", {html.escape(location['country'])}"
                     st.markdown(
                         f"<div class='location'><span title='{t['geo_header_generic']}'>📍</span><span class='name'>{location_label}</span></div>",
                         unsafe_allow_html=True

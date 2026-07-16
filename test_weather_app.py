@@ -52,8 +52,10 @@ def test_generate_forecast_card_html_smoke():
 
 def test_calculate_daily_average_humidity():
     """Test average calculation for complete and partial days."""
-    # 24 hours of 50% humidity, followed by 24 hours of 60% humidity
-    data = [50.0] * 24 + [60.0] * 24
+    # 24 hours of 50% humidity, followed by 24 hours of 60% humidity.
+    # list[float] vs list[float | None] is a list-invariance stub limitation, not a real bug
+    # (see the matching note in safe_get in Weather_app.py).
+    data: list[float | None] = [50.0] * 24 + [60.0] * 24  # pyright: ignore[reportAssignmentType]
     result = calculate_daily_average_humidity(data)
     assert result == [50.0, 60.0]
 
@@ -87,7 +89,9 @@ def test_safe_get_missing_key():
 def test_safe_get_not_a_dict():
     """Test safe_get when input is not a dictionary."""
     assert safe_get(None, "temp", 0) is None
-    assert safe_get([1, 2, 3], "temp", 0) is None
+    # Deliberately passing the wrong type to exercise safe_get's runtime isinstance guard,
+    # which protects against malformed API responses regardless of the declared type.
+    assert safe_get([1, 2, 3], "temp", 0) is None  # pyright: ignore[reportArgumentType]
 
 def test_safe_get_none_element():
     """Test safe_get when the element at index is None."""
@@ -106,6 +110,23 @@ def test_format_date_bg():
     bg_card_date = format_date("2024-06-01", "%A, %d %b", "bg")
     assert "Събота" in bg_card_date
     assert "Юни" in bg_card_date
+
+def test_format_date_empty_or_none():
+    """pd.to_datetime doesn't raise for '' or None, it returns NaT, whose strftime()
+    raises ValueError. format_date must catch this itself rather than crash."""
+    assert format_date("", "%A, %d %b", "en") == ""
+    assert format_date(None, "%A, %d %b", "en") == "None"  # pyright: ignore[reportArgumentType]
+
+def test_get_weather_alerts_with_missing_date():
+    """A malformed/missing entry in daily['time'] must not crash alert generation."""
+    daily_data = {
+        "time": ["", "2024-01-02"],
+        "weather_code": [95, 0],
+        "precipitation_probability_max": [80, 0],
+        "wind_speed_10m_max": [10, 60]
+    }
+    alerts = get_weather_alerts(daily_data)
+    assert len(alerts) == 2
 
 def test_get_wmo_info_bg():
     """Test retrieving WMO condition and emoji in Bulgarian."""
