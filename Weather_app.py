@@ -928,17 +928,62 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .st-key-app_header [data-testid="stSegmentedControl"] label {{
     padding: 4px 8px !important;
 }}
-/* Below the mobile breakpoint, let the control row (season / auto-refresh / language / unit)
-   wrap onto multiple lines instead of the nowrap+shrink-to-fit rule above, which forces
-   every control into one unbreakable row and overflows the viewport on a phone. */
+/* Below the mobile breakpoint, stack the control row (season / auto-refresh / language / unit)
+   into four rows in DOM order: season alone, refresh alone, then language + unit sharing a row.
+   Scoped to .st-key-header_controls (rather than the unlimited-depth descendant selector above)
+   so the refresh row's own nested toggle+button columns aren't caught by the same rule. */
 @media (max-width: 640px) {{
-    .st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] {{
+    .st-key-header_controls {{
+        border-top: 1px solid var(--border);
+        padding-top: 12px;
+        margin-top: 12px;
+    }}
+    /* Anchored with a direct-child chain (> ... > ...), not an open-ended descendant
+       selector, so this only ever matches the season/refresh/lang/unit row itself -
+       not the refresh toggle+button row nested several levels deeper inside it,
+       which is exactly the ambiguity that made the old rule misbehave. Streamlit
+       renders a keyed container's own class on the stVerticalBlock element itself,
+       with a stLayoutWrapper as the sole child wrapping the row - verified against
+       the live DOM, since this exact chain doesn't otherwise appear elsewhere in
+       Streamlit's public docs. */
+    .st-key-header_controls > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
         row-gap: 12px;
     }}
-    .st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
-        flex: 1 1 auto !important;
-        min-width: 130px !important;
+    /* Season swatches (1st column) and the refresh group (2nd column) each break onto
+       their own full-width row; language and unit (3rd/4th) are left to share the row
+       that remains, splitting it evenly. */
+    .st-key-header_controls > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(1),
+    .st-key-header_controls > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {{
+        flex-basis: 100% !important;
+    }}
+    .st-key-header_controls > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3),
+    .st-key-header_controls > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) {{
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+    }}
+
+    /* Refresh row: toggle + button side by side on one line, natural width, no stretch.
+       Same direct-child chain as above, rooted at .st-key-refresh_group instead - this
+       row is already a flex row via Streamlit's own stHorizontalBlock styling, so only
+       flex-wrap/gap need overriding, not display. */
+    .st-key-refresh_group > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] {{
+        flex-wrap: nowrap !important;
+        align-items: center;
+        gap: 8px;
+    }}
+    .st-key-refresh_group > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+        flex: 0 1 auto;
+        min-width: 0;
+    }}
+    .st-key-refresh_group label p {{
+        font-size: 12px;
+    }}
+    .st-key-refresh_group .stButton button {{
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0 10px !important;
+        font-size: 11.5px !important;
     }}
 }}
 .brand-row {{ display: flex; align-items: center; gap: 14px; }}
@@ -1130,7 +1175,7 @@ def main():
             )
             st.markdown(brand_html, unsafe_allow_html=True)
 
-        with col_controls:
+        with col_controls, st.container(key="header_controls"):
             col_season, col_refresh, col_lang, col_unit = st.columns(4)
 
             with col_season:
@@ -1150,7 +1195,7 @@ def main():
                     help=season_legend
                 )
 
-            with col_refresh:
+            with col_refresh, st.container(key="refresh_group"):
                 col_refresh_toggle, col_refresh_button = st.columns(2)
                 with col_refresh_toggle:
                     st.session_state.auto_refresh_enabled = st.toggle(
