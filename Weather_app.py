@@ -868,6 +868,12 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 /* Hides the top deploy bar completely */
 [data-testid="stHeader"] {{ visibility: hidden; display: none; }}
 
+/* Reduce the default top padding Streamlit applies to the main block-container
+   now that the deploy bar/header above it is hidden. */
+[data-testid="stAppViewContainer"] .block-container {{
+    padding: 1rem 1rem 10rem;
+}}
+
 /* ---------- BUTTONS ---------- */
 .stButton button[kind="primary"],
 [data-testid="stLinkButton"] a[kind="primary"] {{
