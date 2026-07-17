@@ -1,0 +1,130 @@
+TRANSLATIONS = {
+    "en": {
+        "page_title": "Weather App",
+        "city_label": "City",
+        "city_placeholder": "Enter city name...",
+        "country_label": "Country (Optional)",
+        "country_placeholder": "Enter country name...",
+        "fetching": "Fetching weather data...",
+        "alerts_header": "⚠️ Weather Alerts for {city}",
+        "alert_precip": "<strong>Alert for {day_name}:</strong> {condition_name} expected! (<strong>{prob}%</strong> chance of precipitation)",
+        "alert_wind": "<strong>Wind Advisory for {day_name}:</strong> High wind speeds expected up to <strong>{wind}</strong>.",
+        "alert_rain_soon": "<strong>Heads up:</strong> {condition_name} expected within the hour (<strong>{prob}%</strong> chance of precipitation).",
+        "alert_storm_soon": "<strong>Storm Warning:</strong> {condition_name} expected within the hour! (<strong>{prob}%</strong> chance of precipitation)",
+        "condition_rain_generic": "Rain",
+        "next_24h": "Immediate Next 24 Hours",
+        "show_past_hours": "Show hours that already passed",
+        "hourly_unavailable": "Hourly data unavailable.",
+        "forecast_7day": "7-Day Forecast",
+        "forecast_14day": "14-Day Forecast",
+        "live_radar": "Live Radar Nowcast 📡",
+        "skywatch_tab": "SkyWatch BG ⚡",
+        "btn_24h": "🕐 24h View",
+        "hourly_header": "Specific Hourly Forecast for {formatted_date}",
+        "hourly_far_future": "Hourly breakdown data is not available this far in the future.",
+        "daily_unavailable": "Daily forecast data unavailable.",
+        "fetch_failed": "Failed to retrieve weather data. Try a different city.",
+        "loc_not_found": "Location not found. Please verify the city and country name.",
+
+        # New Translations Added!
+        "lang_label": "Language",
+        "open_windy": "🌍 Open Full Radar on Windy.com",
+        "open_skywatch": "🌍 Open SkyWatch BG in a New Tab",
+
+        # Card strings
+        "card_feels_like": "Feels like",
+        "card_day_max": "Day Max",
+        "card_day_min": "Day Min",
+        "card_hum": "Hum",
+        "card_wind": "Wind",
+        "card_rain_chance": "Rain chance",
+        "severe_weather": "Severe Weather",
+        "weather_advisory": "Weather Advisory",
+        "card_storm_badge": "Storm",
+        "card_storm_severe_badge": "Severe",
+        "unknown": "Unknown",
+
+        # Geolocation strings
+        "geo_section_label": "Tap the pin to use your location",
+        "geo_divider_text": "or enter manually",
+        "geo_success_toast": "📍 Location found: {city}, {country}",
+        "geo_header_generic": "Your Current Location",
+        "geo_reverse_lookup_failed": "We found your coordinates but couldn't identify the city name. Showing weather for your current location.",
+
+        # Header / theme strings
+        "brand_title": "Weather Dashboard",
+        "brand_sub": "Live forecast, styled to the season",
+        "season_label": "Season",
+        "search_button": "Search",
+
+        # Data refresh strings
+        "refresh_now_button": "🔄 Refresh now",
+        "auto_refresh_label": "Auto-refresh",
+        "auto_refresh_help": "Automatically refresh weather data every 15 minutes",
+        "last_updated": "Last updated {time}",
+    },
+    "bg": {
+        "page_title": "Приложение за времето",
+        "city_label": "Град",
+        "city_placeholder": "Въведете име на град...",
+        "country_label": "Държава (По избор)",
+        "country_placeholder": "Въведете име на държава...",
+        "fetching": "Извличане на данни за времето...",
+        "alerts_header": "⚠️ Сигнали за времето за {city}",
+        "alert_precip": "<strong>Сигнал за {day_name}:</strong> Очаква се {condition_name}! (<strong>{prob}%</strong> шанс за валежи)",
+        "alert_wind": "<strong>Предупреждение за вятър за {day_name}:</strong> Очакват се силни ветрове до <strong>{wind}</strong>.",
+        "alert_rain_soon": "<strong>Внимание:</strong> Очаква се {condition_name} до един час (<strong>{prob}%</strong> шанс за валежи).",
+        "alert_storm_soon": "<strong>Предупреждение за буря:</strong> Очаква се {condition_name} до един час! (<strong>{prob}%</strong> шанс за валежи)",
+        "condition_rain_generic": "Дъжд",
+        "next_24h": "Следващите 24 часа",
+        "show_past_hours": "Покажи изминалите часове",
+        "hourly_unavailable": "Часовите данни са ненайдостъпни.",
+        "forecast_7day": "7-дневна прогноза",
+        "forecast_14day": "14-дневна прогноза",
+        "live_radar": "Радар на живо 📡",
+        "skywatch_tab": "SkyWatch BG ⚡",
+        "btn_24h": "🕐 24ч преглед",
+        "hourly_header": "Подробна часова прогноза за {formatted_date}",
+        "hourly_far_future": "Часовите данни за разпределението не са налични толкова напред във времето.",
+        "daily_unavailable": "Данните за ежедневната прогноза са недостъпни.",
+        "fetch_failed": "Неуспешно извличане на данни за времето. Опитайте с друг град.",
+        "loc_not_found": "Местоположението не е намерено. Моля, проверете името на града и държавата.",
+
+        # New Translations Added!
+        "lang_label": "Език",
+        "open_windy": "🌍 Отвори пълния радар на Windy.com",
+        "open_skywatch": "🌍 Отвори SkyWatch BG в нов таб",
+
+        # Card strings
+        "card_feels_like": "Усеща се като",
+        "card_day_max": "Макс. за деня",
+        "card_day_min": "Мин. за деня",
+        "card_hum": "Влаж.",
+        "card_wind": "Вятър",
+        "card_rain_chance": "Шанс за валежи",
+        "severe_weather": "Опасно време",
+        "weather_advisory": "Предупреждение за времето",
+        "card_storm_badge": "Буря",
+        "card_storm_severe_badge": "Опасно",
+        "unknown": "Неизвестно",
+
+        # Geolocation strings
+        "geo_section_label": "Докоснете иглата за текущото ви местоположение",
+        "geo_divider_text": "или потърсете ръчно",
+        "geo_success_toast": "📍 Местоположението е намерено: {city}, {country}",
+        "geo_header_generic": "Текущото ви местоположение",
+        "geo_reverse_lookup_failed": "Намерихме координатите ви, но не успяхме да определим името на града. Показва се времето за текущото ви местоположение.",
+
+        # Header / theme strings
+        "brand_title": "Табло за времето",
+        "brand_sub": "Прогноза на живо, стилизирана според сезона",
+        "season_label": "Сезон",
+        "search_button": "Търсене",
+
+        # Data refresh strings
+        "refresh_now_button": "🔄 Обнови сега",
+        "auto_refresh_label": "Автообновяване",
+        "auto_refresh_help": "Автоматично обновяване на данните за времето на всеки 15 минути",
+        "last_updated": "Последно обновено {time}",
+    }
+}
