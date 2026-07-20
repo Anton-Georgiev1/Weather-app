@@ -357,7 +357,7 @@ def main():
                 f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value'>{wind_str}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_hum']}</div><div class='value'>{humidity_str}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_rain_chance']}</div><div class='value'>{rain_chance_str}</div></div>"
-                f"<div class='stat-chip'><div class='label'>{t['card_rain_chance_soon']}</div><div class='value'>{near_rain_chance_str}</div></div>"
+                f"<div class='stat-chip' title='{t['card_rain_chance_soon_help']}'><div class='label'>{t['card_rain_chance_soon']}</div><div class='value'>{near_rain_chance_str}</div></div>"
                 "</div>"
                 "</div>"
             )
