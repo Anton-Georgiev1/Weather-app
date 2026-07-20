@@ -60,6 +60,22 @@ def format_wind_speed(speed_kmh: float | None, unit: str, lang: str = "en") -> s
     display_value = speed_kmh * 0.621371 if unit == "F" else speed_kmh
     return f"{round(display_value, 1)} {wind_unit}"
 
+def get_time_of_day_segment(time_str: str) -> str | None:
+    """Classify an ISO hourly timestamp into a morning/afternoon/evening/night band."""
+    try:
+        hour = pd.to_datetime(time_str).hour  # pyright: ignore[reportUnknownMemberType]
+    except Exception:
+        return None
+    if pd.isna(hour):  # pyright: ignore[reportUnknownMemberType]
+        return None
+    if 6 <= hour < 12:
+        return "morning"
+    if 12 <= hour < 18:
+        return "afternoon"
+    if 18 <= hour < 22:
+        return "evening"
+    return "night"
+
 def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any = None) -> Any:
     """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
     if not isinstance(data_dict, dict):

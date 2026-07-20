@@ -9,7 +9,7 @@ from weather_app.alerts import (
     near_term_storm_is_today,
 )
 from weather_app.config import GEOCODING_API_URL, REVERSE_GEOCODING_API_URL, WEATHER_API_URL
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_time_of_day_segment, get_wmo_info, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html
 from weather_app.weather_api import build_location_from_coordinates, get_coordinates, get_weather_data, reverse_geocode
 
@@ -435,6 +435,24 @@ def test_safe_get_none_element():
     """Test safe_get when the element at index is None."""
     data = {"temp": [10, None, 30]}
     assert safe_get(data, "temp", 1, default=15) == 15
+
+
+def test_get_time_of_day_segment_boundaries():
+    """Each band boundary hour must land in the correct segment."""
+    assert get_time_of_day_segment("2024-01-01T06:00") == "morning"
+    assert get_time_of_day_segment("2024-01-01T11:00") == "morning"
+    assert get_time_of_day_segment("2024-01-01T12:00") == "afternoon"
+    assert get_time_of_day_segment("2024-01-01T17:00") == "afternoon"
+    assert get_time_of_day_segment("2024-01-01T18:00") == "evening"
+    assert get_time_of_day_segment("2024-01-01T21:00") == "evening"
+    assert get_time_of_day_segment("2024-01-01T22:00") == "night"
+    assert get_time_of_day_segment("2024-01-01T05:00") == "night"
+
+
+def test_get_time_of_day_segment_invalid_input():
+    """Malformed timestamps must not crash the segment lookup."""
+    assert get_time_of_day_segment("") is None
+    assert get_time_of_day_segment(None) is None  # pyright: ignore[reportArgumentType]
 
 
 # --- Bulgarian Translation & Date Formatting Tests ---

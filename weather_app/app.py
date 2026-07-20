@@ -10,7 +10,7 @@ from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, 
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_time_of_day_segment, get_wmo_info, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html
 from weather_app.storage import load_last_language, load_last_location, save_last_language, save_last_location
 from weather_app.theme import get_theme_css
@@ -401,18 +401,47 @@ def main():
                 end_idx = min(start_idx + 24, len(hourly["time"]))
                 hour_indices = list(range(start_idx, end_idx))
 
-                hour_cards_html = "".join(
-                    generate_hour_card_html(
-                        hourly["time"][idx],
-                        code=safe_get(hourly, "weather_code", idx),
-                        rain_prob=safe_get(hourly, "precipitation_probability", idx),
-                        temp=safe_get(hourly, "temperature_2m", idx),
-                        lang=lang,
-                        unit=unit
-                    )
-                    for idx in hour_indices
+                time_filter_keys = ["all", "morning", "afternoon", "evening", "night"]
+                time_filter_labels = {
+                    "all": t["time_filter_all"],
+                    "morning": t["time_filter_morning"],
+                    "afternoon": t["time_filter_afternoon"],
+                    "evening": t["time_filter_evening"],
+                    "night": t["time_filter_night"],
+                }
+                if "hour_time_filter" not in st.session_state:
+                    st.session_state.hour_time_filter = "all"
+                st.session_state.hour_time_filter = st.pills(
+                    t["time_filter_label"],
+                    options=time_filter_keys,
+                    format_func=lambda key: time_filter_labels[key],
+                    default=st.session_state.hour_time_filter,
+                    required=True,
+                    label_visibility="collapsed",
+                    key="hour_time_filter_pills",
                 )
-                st.markdown(f"<div class='hour-strip'>{hour_cards_html}</div>", unsafe_allow_html=True)
+
+                if st.session_state.hour_time_filter != "all":
+                    hour_indices = [
+                        idx for idx in hour_indices
+                        if get_time_of_day_segment(hourly["time"][idx]) == st.session_state.hour_time_filter
+                    ]
+
+                if hour_indices:
+                    hour_cards_html = "".join(
+                        generate_hour_card_html(
+                            hourly["time"][idx],
+                            code=safe_get(hourly, "weather_code", idx),
+                            rain_prob=safe_get(hourly, "precipitation_probability", idx),
+                            temp=safe_get(hourly, "temperature_2m", idx),
+                            lang=lang,
+                            unit=unit
+                        )
+                        for idx in hour_indices
+                    )
+                    st.markdown(f"<div class='hour-strip'>{hour_cards_html}</div>", unsafe_allow_html=True)
+                else:
+                    st.info(t["no_hours_in_segment"])
             else:
                 st.warning(t["hourly_unavailable"])
 
