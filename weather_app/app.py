@@ -6,7 +6,7 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit_geolocation import streamlit_geolocation  # pyright: ignore[reportMissingTypeStubs]
 from streamlit_local_storage import LocalStorage  # pyright: ignore[reportMissingTypeStubs]
 
-from weather_app.alerts import get_near_term_alerts, get_weather_alerts, near_term_storm_is_today
+from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, get_weather_alerts, near_term_storm_is_today
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
@@ -332,6 +332,15 @@ def main():
             rain_chance_val = safe_get(daily, "precipitation_probability_max", 0)
             rain_chance_str = f"{rain_chance_val}%" if rain_chance_val is not None else "--%"
 
+            # Current hour plus the same near-term window used for the near-term
+            # rain/storm alert above, so the two stay consistent with each other.
+            near_rain_probs = [
+                prob for idx in range(upcoming_start_idx, upcoming_start_idx + NEAR_TERM_LOOKAHEAD_HOURS + 1)
+                if (prob := safe_get(hourly, "precipitation_probability", idx)) is not None
+            ]
+            near_rain_chance_val = max(near_rain_probs) if near_rain_probs else None
+            near_rain_chance_str = f"{near_rain_chance_val}%" if near_rain_chance_val is not None else "--%"
+
             hero_html = (
                 "<div class='hero'>"
                 "<div class='hero-main'>"
@@ -348,6 +357,7 @@ def main():
                 f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value'>{wind_str}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_hum']}</div><div class='value'>{humidity_str}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_rain_chance']}</div><div class='value'>{rain_chance_str}</div></div>"
+                f"<div class='stat-chip'><div class='label'>{t['card_rain_chance_soon']}</div><div class='value'>{near_rain_chance_str}</div></div>"
                 "</div>"
                 "</div>"
             )
