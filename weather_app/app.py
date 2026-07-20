@@ -6,12 +6,12 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit_geolocation import streamlit_geolocation  # pyright: ignore[reportMissingTypeStubs]
 from streamlit_local_storage import LocalStorage  # pyright: ignore[reportMissingTypeStubs]
 
-from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, get_weather_alerts, near_term_storm_is_today
+from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, get_weather_alerts, near_term_storm_is_today, summarize_segment_risk
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
 from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_time_of_day_segment, get_wmo_info, safe_get
-from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html
+from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.storage import load_last_language, load_last_location, save_last_language, save_last_location
 from weather_app.theme import get_theme_css
 from weather_app.weather_api import build_location_from_coordinates, get_coordinates, get_weather_data
@@ -426,6 +426,18 @@ def main():
                         idx for idx in hour_indices
                         if get_time_of_day_segment(hourly["time"][idx]) == st.session_state.hour_time_filter
                     ]
+
+                    if hour_indices:
+                        segment_risk = summarize_segment_risk(hourly, hour_indices)
+                        st.markdown(
+                            generate_segment_risk_html(
+                                segment_risk["max_prob"],
+                                segment_risk["has_storm"],
+                                segment_risk["is_danger"],
+                                lang=lang
+                            ),
+                            unsafe_allow_html=True
+                        )
 
                 if hour_indices:
                     hour_cards_html = "".join(

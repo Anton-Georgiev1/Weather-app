@@ -7,10 +7,11 @@ from weather_app.alerts import (
     get_near_term_alerts,
     get_weather_alerts,
     near_term_storm_is_today,
+    summarize_segment_risk,
 )
 from weather_app.config import GEOCODING_API_URL, REVERSE_GEOCODING_API_URL, WEATHER_API_URL
 from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_time_of_day_segment, get_wmo_info, safe_get
-from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html
+from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.weather_api import build_location_from_coordinates, get_coordinates, get_weather_data, reverse_geocode
 
 
@@ -256,6 +257,52 @@ def test_near_term_storm_is_today_false_on_missing_daily_data():
     near_term_alerts = [{"severity": "error", "message": "x", "date": "2024-01-01"}]
     assert near_term_storm_is_today(near_term_alerts, {}) is False
     assert near_term_storm_is_today(near_term_alerts, None) is False
+
+
+def test_summarize_segment_risk_low_probability_is_not_danger():
+    hourly_data = {
+        "precipitation_probability": [10, 20, 30],
+        "weather_code": [0, 1, 2],
+    }
+    result = summarize_segment_risk(hourly_data, [0, 1, 2])
+    assert result == {"max_prob": 30, "has_storm": False, "is_danger": False}
+
+
+def test_summarize_segment_risk_high_probability_is_danger():
+    hourly_data = {
+        "precipitation_probability": [10, 85, 30],
+        "weather_code": [0, 61, 2],
+    }
+    result = summarize_segment_risk(hourly_data, [0, 1, 2])
+    assert result == {"max_prob": 85, "has_storm": False, "is_danger": True}
+
+
+def test_summarize_segment_risk_storm_code_is_danger_even_at_low_probability():
+    hourly_data = {
+        "precipitation_probability": [5, 10],
+        "weather_code": [95, 0],
+    }
+    result = summarize_segment_risk(hourly_data, [0, 1])
+    assert result == {"max_prob": 10, "has_storm": True, "is_danger": True}
+
+
+def test_summarize_segment_risk_empty_indices():
+    hourly_data = {"precipitation_probability": [50], "weather_code": [95]}
+    assert summarize_segment_risk(hourly_data, []) == {"max_prob": 0, "has_storm": False, "is_danger": False}
+
+
+def test_generate_segment_risk_html_danger_uses_alert_error_class():
+    html = generate_segment_risk_html(85, has_storm=True, is_danger=True, lang="en")
+    assert "alert-error" in html
+    assert "85%" in html
+    assert "⛈️" in html
+
+
+def test_generate_segment_risk_html_safe_range_omits_danger_class():
+    html = generate_segment_risk_html(20, has_storm=False, is_danger=False, lang="en")
+    assert "alert-error" not in html
+    assert "20%" in html
+    assert "💧" in html
 
 
 def test_format_temperature():

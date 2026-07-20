@@ -60,6 +60,19 @@ def generate_alert_html(message: str, severity: AlertSeverity, lang: str = "en")
         "</div>"
     )
 
+def generate_segment_risk_html(max_prob: int, has_storm: bool, is_danger: bool, lang: str = "en") -> str:
+    """Generate the HTML for the rain/storm risk summary shown above the hour strip when
+    a Morning/Afternoon/Evening/Night filter is active. Reuses the `.alert`/`.alert-error`
+    styling so a high-risk window reads with the same urgency as a weather alert."""
+    icon = "⛈️" if has_storm else ("🌧️" if is_danger else "💧")
+    message = TRANSLATIONS[lang]["segment_risk_summary"].format(prob=max_prob)
+    severity_class = " alert-error" if is_danger else ""
+    return (
+        f"<div class='alert{severity_class}'>"
+        f"<span>{icon}</span><span class='text'>{message}</span>"
+        "</div>"
+    )
+
 def generate_hour_card_html(
     date_str: str,
     code: int | None,

@@ -120,6 +120,27 @@ def get_near_term_alerts(hourly_data: dict[str, Any], upcoming_start_idx: int, l
         "date": best_date
     }]
 
+def summarize_segment_risk(hourly_data: dict[str, Any], indices: list[int]) -> dict[str, Any]:
+    """Roll up the worst rain/storm risk across a set of hourly indices -- used to flag
+    a Morning/Afternoon/Evening/Night filter window as dangerous in the UI. Reuses the
+    same storm codes and probability threshold as the near-term alert so "danger" means
+    the same thing everywhere in the app."""
+    max_prob = 0
+    has_storm = False
+    for idx in indices:
+        try:
+            prob = int(safe_get(hourly_data, "precipitation_probability", idx, 0))
+        except (TypeError, ValueError):
+            prob = 0
+        max_prob = max(max_prob, prob)
+        if safe_get(hourly_data, "weather_code", idx) in NEAR_TERM_STORM_CODES:
+            has_storm = True
+    return {
+        "max_prob": max_prob,
+        "has_storm": has_storm,
+        "is_danger": has_storm or max_prob >= NEAR_TERM_RAIN_PROBABILITY_THRESHOLD,
+    }
+
 def near_term_storm_is_today(near_term_alerts: list[dict[str, Any]], daily_data: dict[str, Any] | None) -> bool:
     """True when a near-term (this/next hour) storm alert's triggering hour actually
     falls on today's calendar date. The near-term lookahead can cross into tomorrow's
