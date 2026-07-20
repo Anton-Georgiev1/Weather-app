@@ -305,6 +305,13 @@ def test_generate_segment_risk_html_safe_range_omits_danger_class():
     assert "💧" in html
 
 
+def test_generate_segment_risk_html_probability_only_danger_uses_alert_error_class():
+    html = generate_segment_risk_html(85, has_storm=False, is_danger=True, lang="en")
+    assert "alert-error" in html
+    assert "85%" in html
+    assert "🌧️" in html
+
+
 def test_format_temperature():
     """Test Celsius passthrough, Fahrenheit conversion, and
     missing-value fallback."""
