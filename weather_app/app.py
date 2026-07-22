@@ -447,6 +447,7 @@ def main():
                             code=safe_get(hourly, "weather_code", idx),
                             rain_prob=safe_get(hourly, "precipitation_probability", idx),
                             temp=safe_get(hourly, "temperature_2m", idx),
+                            wind=safe_get(hourly, "wind_speed_10m", idx),
                             lang=lang,
                             unit=unit
                         )
@@ -571,6 +572,7 @@ def main():
                                 code=safe_get(hourly, "weather_code", idx),
                                 rain_prob=safe_get(hourly, "precipitation_probability", idx),
                                 temp=safe_get(hourly, "temperature_2m", idx),
+                                wind=safe_get(hourly, "wind_speed_10m", idx),
                                 lang=lang,
                                 unit=unit
                             )

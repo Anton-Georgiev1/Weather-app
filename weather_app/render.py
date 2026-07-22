@@ -78,10 +78,13 @@ def generate_hour_card_html(
     code: int | None,
     rain_prob: float | int | str | None,
     temp: float | None,
+    wind: float | None = None,
     lang: str = "en",
     unit: str = "C"
 ) -> str:
-    """Generate the HTML for a single compact 24-hour strip card, matching the design's `.hour-card`."""
+    """Generate the HTML for a single compact 24-hour strip card, matching the design's `.hour-card`.
+    Rain chance and wind speed each get an icon plus a tooltip (matching the `.day-card` `.meta`
+    pattern) so the percentage reads as "chance of rain" rather than an unlabeled number."""
     try:
         label = format_date(date_str, "%H:00", lang)
     except Exception:
@@ -89,6 +92,7 @@ def generate_hour_card_html(
 
     resolved_code = code if code is not None else -1
     desc, emoji = get_wmo_info(resolved_code, lang)
+    t = TRANSLATIONS[lang]
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -96,13 +100,17 @@ def generate_hour_card_html(
         rain_prob_val = 0
 
     temp_str = format_temperature(temp, unit)
+    wind_str = format_wind_speed(wind, unit, lang)
 
     return (
         "<div class='hour-card'>"
         f"<div class='time'>{label}</div>"
         f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='temp'>{temp_str}</div>"
-        f"<div class='rain'>{rain_prob_val}%</div>"
+        "<div class='meta'>"
+        f"<span title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</span>"
+        f"<span title='{t['card_wind']}'>💨 {wind_str}</span>"
+        "</div>"
         "</div>"
     )
 

@@ -318,7 +318,8 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-card .time {{ font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; color: var(--text); }}
 .hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; cursor: help; }}
 .hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
-.hour-card .rain {{ font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 2px; color: var(--text); }}
+.hour-card .meta {{ display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }}
+.hour-card .meta span {{ font-size: 10.5px; opacity: .55; font-weight: 600; color: var(--text); cursor: help; }}
 
 /* ---------- 7-DAY CARDS ---------- */
 .day-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }}

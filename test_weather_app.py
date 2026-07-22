@@ -381,12 +381,17 @@ def test_format_wind_speed():
 
 
 def test_generate_hour_card_html_smoke():
-    """Smoke test for the 24h-strip hour card, including the
-    weather-icon tooltip."""
-    result = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0)
+    """Smoke test for the 24h-strip hour card, including the weather-icon
+    tooltip and the rain-chance/wind tooltips that label what the
+    percentage and speed mean."""
+    result = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0, wind=15.0)
     assert "hour-card" in result
     assert "title='Clear sky'" in result
     assert "20.0°C" in result
+    assert "title='Rain chance'" in result
+    assert "💧 10%" in result
+    assert "title='Wind'" in result
+    assert "💨 15.0 km/h" in result
 
 
 def test_generate_day_card_html_smoke():
