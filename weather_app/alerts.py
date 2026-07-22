@@ -26,11 +26,33 @@ NEAR_TERM_RAIN_PROBABILITY_THRESHOLD = 70
 DAY_CARD_STORM_SEVERE_CODES = {96, 99}
 DAY_CARD_STORM_CODES = NEAR_TERM_STORM_CODES - DAY_CARD_STORM_SEVERE_CODES
 
+def _today_storm_risk_remains(
+    hourly_data: dict[str, Any] | None,
+    upcoming_start_idx: int,
+    today_date: str,
+) -> bool:
+    """True when a NEAR_TERM_STORM_CODES hour still lies between now and midnight
+    today. The daily forecast has a single weather_code per day, so without this,
+    today's severe-weather alert would stay visible all day even after the storm
+    it describes has already passed. Falls back to "still relevant" when hourly
+    data isn't available, matching this function's behavior before the check existed."""
+    if not hourly_data or "time" not in hourly_data:
+        return True
+    for idx in range(upcoming_start_idx, len(hourly_data["time"])):
+        time_str = hourly_data["time"][idx]
+        if not time_str.startswith(today_date):
+            break
+        if safe_get(hourly_data, "weather_code", idx) in NEAR_TERM_STORM_CODES:
+            return True
+    return False
+
 def get_weather_alerts(
     daily_data: dict[str, Any],
     lang: str = "en",
     unit: str = "C",
-    skip_today_precip: bool = False
+    skip_today_precip: bool = False,
+    hourly_data: dict[str, Any] | None = None,
+    upcoming_start_idx: int = 0,
 ) -> list[dict[str, Any]]:
     """Analyze daily data for severe weather or wind alerts, limited to the near term
     (ALERT_LOOKAHEAD_DAYS) since forecasts this far out are unreliable for alerting.
@@ -38,7 +60,11 @@ def get_weather_alerts(
     skip_today_precip drops today's severe-weather-condition alert (not the wind one):
     the daily forecast has a single weather_code per day, so when the near-term (this
     hour/next hour) check has already raised a storm alert, today's entry here would
-    describe that same storm a second time."""
+    describe that same storm a second time.
+
+    hourly_data and upcoming_start_idx (optional) let today's condition alert be
+    dropped once the storm it describes has already passed for the day -- see
+    _today_storm_risk_remains."""
     alerts: list[dict[str, Any]] = []
     if not daily_data or "time" not in daily_data:
         return alerts
@@ -49,7 +75,14 @@ def get_weather_alerts(
         wind = safe_get(daily_data, "wind_speed_10m_max", i, 0)
         day_name = format_date(daily_data["time"][i], "%A, %B %d", lang)
 
-        if wcode in [65, 67, 75, 82, 86, 95, 96, 99] and not (i == 0 and skip_today_precip):
+        today_storm_still_ahead = i != 0 or _today_storm_risk_remains(
+            hourly_data, upcoming_start_idx, daily_data["time"][i]
+        )
+        if (
+            wcode in [65, 67, 75, 82, 86, 95, 96, 99]
+            and not (i == 0 and skip_today_precip)
+            and today_storm_still_ahead
+        ):
             condition_name = get_wmo_info(wcode, lang)[0]
             msg_tpl = TRANSLATIONS[lang]["alert_precip"]
             alerts.append({

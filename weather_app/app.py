@@ -372,7 +372,8 @@ def main():
             daily_alerts = (
                 get_weather_alerts(
                     daily, lang=lang, unit=unit,
-                    skip_today_precip=near_term_storm_is_today(near_term_alerts, daily)
+                    skip_today_precip=near_term_storm_is_today(near_term_alerts, daily),
+                    hourly_data=hourly, upcoming_start_idx=upcoming_start_idx
                 )
                 if daily and "time" in daily else []
             )

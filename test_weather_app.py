@@ -79,6 +79,55 @@ def test_get_weather_alerts_skip_today_precip_false_keeps_default_behavior():
     assert "Thunderstorm" in alerts[0]["message"]
 
 
+def test_get_weather_alerts_drops_todays_precip_alert_once_storm_has_passed():
+    """When hourly_data/upcoming_start_idx are supplied, today's severe-weather
+    alert must disappear once every remaining hour today has clear conditions --
+    it shouldn't linger just because the daily forecast still lists a storm code
+    for the day as a whole."""
+    daily_data = {
+        "time": ["2024-01-01", "2024-01-02"],
+        "weather_code": [95, 0],
+        "precipitation_probability_max": [80, 0],
+        "wind_speed_10m_max": [10, 10]
+    }
+    hourly_data = {
+        "time": [f"2024-01-01T{h:02d}:00" for h in range(24)],
+        "weather_code": [95] * 18 + [0] * 6,  # storm passed by 18:00
+    }
+    alerts = get_weather_alerts(daily_data, hourly_data=hourly_data, upcoming_start_idx=20)
+    assert not any("Thunderstorm" in a["message"] for a in alerts)
+
+
+def test_get_weather_alerts_keeps_todays_precip_alert_while_storm_still_ahead():
+    """The same today's-alert check must NOT drop the alert while a storm hour
+    still remains later today."""
+    daily_data = {
+        "time": ["2024-01-01"],
+        "weather_code": [95],
+        "precipitation_probability_max": [80],
+        "wind_speed_10m_max": [10]
+    }
+    hourly_data = {
+        "time": [f"2024-01-01T{h:02d}:00" for h in range(24)],
+        "weather_code": [0] * 18 + [95] * 6,  # storm arrives later today
+    }
+    alerts = get_weather_alerts(daily_data, hourly_data=hourly_data, upcoming_start_idx=10)
+    assert any("Thunderstorm" in a["message"] for a in alerts)
+
+
+def test_get_weather_alerts_without_hourly_data_keeps_default_behavior():
+    """Callers that don't pass hourly_data (e.g. existing tests above) must keep
+    seeing today's alert regardless of time of day."""
+    daily_data = {
+        "time": ["2024-01-01"],
+        "weather_code": [95],
+        "precipitation_probability_max": [80],
+        "wind_speed_10m_max": [10]
+    }
+    alerts = get_weather_alerts(daily_data, upcoming_start_idx=23)
+    assert any("Thunderstorm" in a["message"] for a in alerts)
+
+
 def test_get_weather_alerts_none():
     """Test that no alerts are returned for calm weather."""
     daily_data = {
