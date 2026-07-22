@@ -394,6 +394,37 @@ def test_generate_hour_card_html_smoke():
     assert "💨 15.0 km/h" in result
 
 
+def test_generate_hour_card_html_storm_severe_tier():
+    """Thunderstorm-with-hail/severe-thunderstorm codes get the darkest tier
+    class and its badge, same as the 7-day cards."""
+    for code in DAY_CARD_STORM_SEVERE_CODES:
+        result = generate_hour_card_html("2024-01-01T14:00", code, 80, 20.0, wind=15.0)
+        assert "hour-card-storm-severe" in result
+        assert "hour-card-storm'" not in result  # not misclassified as the lighter tier
+        assert "storm-badge" in result
+        assert "Severe" in result
+
+
+def test_generate_hour_card_html_storm_tier():
+    """Heavy/violent rain, heavy snow, and plain thunderstorm codes get the
+    lighter storm tier class and its badge, not the severe tier."""
+    for code in DAY_CARD_STORM_CODES:
+        result = generate_hour_card_html("2024-01-01T14:00", code, 80, 20.0, wind=15.0)
+        assert "hour-card-storm'" in result
+        assert "hour-card-storm-severe" not in result
+        assert "storm-badge" in result
+        assert "Storm" in result
+
+
+def test_generate_hour_card_html_no_storm_tier_for_mild_or_unknown_codes():
+    """Mild weather, clear sky, and an unresolved code must not get a storm
+    class or badge."""
+    for code in (None, 0, 61):
+        result = generate_hour_card_html("2024-01-01T14:00", code, 10, 20.0, wind=15.0)
+        assert "hour-card-storm" not in result
+        assert "storm-badge" not in result
+
+
 def test_generate_day_card_html_smoke():
     """Smoke test for the 7-day card, including the rain/wind tooltip text."""
     result = generate_day_card_html(

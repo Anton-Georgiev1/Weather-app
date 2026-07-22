@@ -84,7 +84,9 @@ def generate_hour_card_html(
 ) -> str:
     """Generate the HTML for a single compact 24-hour strip card, matching the design's `.hour-card`.
     Rain chance and wind speed each get an icon plus a tooltip (matching the `.day-card` `.meta`
-    pattern) so the percentage reads as "chance of rain" rather than an unlabeled number."""
+    pattern) so the percentage reads as "chance of rain" rather than an unlabeled number.
+    Stormy codes (see DAY_CARD_STORM_CODES / DAY_CARD_STORM_SEVERE_CODES) get the same severity
+    modifier class and badge treatment as the 7-day cards, so a stormy hour stands out too."""
     try:
         label = format_date(date_str, "%H:00", lang)
     except Exception:
@@ -93,6 +95,16 @@ def generate_hour_card_html(
     resolved_code = code if code is not None else -1
     desc, emoji = get_wmo_info(resolved_code, lang)
     t = TRANSLATIONS[lang]
+
+    if resolved_code in DAY_CARD_STORM_SEVERE_CODES:
+        storm_class = " hour-card-storm-severe"
+        storm_badge = f"<div class='storm-badge'>{t['card_storm_severe_badge']}</div>"
+    elif resolved_code in DAY_CARD_STORM_CODES:
+        storm_class = " hour-card-storm"
+        storm_badge = f"<div class='storm-badge'>{t['card_storm_badge']}</div>"
+    else:
+        storm_class = ""
+        storm_badge = ""
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -103,7 +115,8 @@ def generate_hour_card_html(
     wind_str = format_wind_speed(wind, unit, lang)
 
     return (
-        "<div class='hour-card'>"
+        f"<div class='hour-card{storm_class}'>"
+        f"{storm_badge}"
         f"<div class='time'>{label}</div>"
         f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='temp'>{temp_str}</div>"

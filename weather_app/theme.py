@@ -314,12 +314,24 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 
 /* ---------- 24H GRID ---------- */
 .hour-strip {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }}
-.hour-card {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
+.hour-card {{ position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
 .hour-card .time {{ font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; color: var(--text); }}
 .hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; cursor: help; }}
 .hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
 .hour-card .meta {{ display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }}
 .hour-card .meta span {{ font-size: 10.5px; opacity: .55; font-weight: 600; color: var(--text); cursor: help; }}
+.hour-card .storm-badge {{ top: 4px; right: 4px; padding: 1px 5px; font-size: 9px; }}
+
+.hour-card.hour-card-storm {{ background: var(--storm-bg); border: 1px solid var(--storm-border); box-shadow: 0 4px 14px var(--storm-shadow); }}
+.hour-card.hour-card-storm .meta span {{ opacity: .85; }}
+
+.hour-card.hour-card-storm-severe {{ background: var(--storm-severe-bg); border: 2px solid var(--storm-severe-border); box-shadow: 0 8px 22px var(--storm-severe-shadow); }}
+.hour-card.hour-card-storm-severe .time,
+.hour-card.hour-card-storm-severe .temp {{ color: #fff; }}
+.hour-card.hour-card-storm-severe .meta span {{ color: rgba(255,255,255,.85); opacity: 1; }}
+
+.hour-card-storm .storm-badge {{ background: var(--storm-badge-bg); }}
+.hour-card-storm-severe .storm-badge {{ background: var(--storm-severe-border); }}
 
 /* ---------- 7-DAY CARDS ---------- */
 .day-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }}
