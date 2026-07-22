@@ -44,6 +44,16 @@ def generate_forecast_row_html(
         "</div>"
     )
 
+def _resolve_storm_treatment(resolved_code: int, card_prefix: str, lang: str) -> tuple[str, str]:
+    """Pick the storm severity modifier class and badge markup for a card's weather
+    code, shared by the hour-card and day-card renderers so both tiers stay in sync."""
+    t = TRANSLATIONS[lang]
+    if resolved_code in DAY_CARD_STORM_SEVERE_CODES:
+        return f" {card_prefix}-storm-severe", f"<div class='storm-badge'>{t['card_storm_severe_badge']}</div>"
+    if resolved_code in DAY_CARD_STORM_CODES:
+        return f" {card_prefix}-storm", f"<div class='storm-badge'>{t['card_storm_badge']}</div>"
+    return "", ""
+
 def generate_alert_html(message: str, severity: AlertSeverity, lang: str = "en") -> str:
     """Generate the HTML for a single alert banner, matching the design's `.alert` chip.
     Severity ("warning" or "error") picks the icon, tooltip title, and the CSS
@@ -96,15 +106,7 @@ def generate_hour_card_html(
     desc, emoji = get_wmo_info(resolved_code, lang)
     t = TRANSLATIONS[lang]
 
-    if resolved_code in DAY_CARD_STORM_SEVERE_CODES:
-        storm_class = " hour-card-storm-severe"
-        storm_badge = f"<div class='storm-badge'>{t['card_storm_severe_badge']}</div>"
-    elif resolved_code in DAY_CARD_STORM_CODES:
-        storm_class = " hour-card-storm"
-        storm_badge = f"<div class='storm-badge'>{t['card_storm_badge']}</div>"
-    else:
-        storm_class = ""
-        storm_badge = ""
+    storm_class, storm_badge = _resolve_storm_treatment(resolved_code, "hour-card", lang)
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -149,15 +151,7 @@ def generate_day_card_html(
     desc, emoji = get_wmo_info(resolved_code, lang)
     t = TRANSLATIONS[lang]
 
-    if resolved_code in DAY_CARD_STORM_SEVERE_CODES:
-        storm_class = " day-card-storm-severe"
-        storm_badge = f"<div class='storm-badge'>{t['card_storm_severe_badge']}</div>"
-    elif resolved_code in DAY_CARD_STORM_CODES:
-        storm_class = " day-card-storm"
-        storm_badge = f"<div class='storm-badge'>{t['card_storm_badge']}</div>"
-    else:
-        storm_class = ""
-        storm_badge = ""
+    storm_class, storm_badge = _resolve_storm_treatment(resolved_code, "day-card", lang)
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
