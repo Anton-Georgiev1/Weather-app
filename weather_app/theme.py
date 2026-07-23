@@ -63,14 +63,14 @@ html, [data-testid="stAppViewContainer"], .stApp {{
     border: none !important;
     color: #fff !important;
     font-weight: 700 !important;
-    border-radius: 10px !important;
+    border-radius: .625rem !important;
     box-shadow: 0 3px 10px var(--accent-shadow) !important;
 }}
 .stButton button[kind="secondary"] {{
     background: var(--surface) !important;
     border: 1px solid var(--border) !important;
     color: var(--text) !important;
-    border-radius: 10px !important;
+    border-radius: .625rem !important;
     font-weight: 700 !important;
 }}
 
@@ -111,9 +111,9 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 [data-testid="stTextInput"] input {{
     background: var(--surface) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 10px !important;
+    border-radius: .625rem !important;
     color: var(--text) !important;
-    min-height: 42px;
+    min-height: 2.625rem;
 }}
 [data-testid="stTextInput"] label p {{
     font-weight: 700 !important;
@@ -124,17 +124,17 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 [data-testid="stSegmentedControl"] div[role="radiogroup"] {{
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 3px;
-    gap: 2px;
+    border-radius: .625rem;
+    padding: .1875rem;
+    gap: .125rem;
 }}
 [data-testid="stSegmentedControl"] label {{
-    border-radius: 7px !important;
+    border-radius: .4375rem !important;
     border: none !important;
     background: transparent !important;
 }}
 [data-testid="stSegmentedControl"] label p {{
-    font-size: 12px !important;
+    font-size: .75rem !important;
     font-weight: 700 !important;
     color: var(--text) !important;
 }}
@@ -149,17 +149,17 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 
 /* ---------- TABS ---------- */
 .stTabs [data-baseweb="tab-list"] {{
-    gap: 6px;
+    gap: .375rem;
     border-bottom: 1px solid var(--border);
 }}
 .stTabs [data-baseweb="tab"] {{
     height: auto;
-    padding: 10px 18px;
+    padding: .625rem 1.125rem;
     background: transparent !important;
 }}
 .stTabs [data-baseweb="tab"] p {{
     font-family: 'Manrope', sans-serif !important;
-    font-size: 13.5px !important;
+    font-size: .84375rem !important;
     font-weight: 700 !important;
     color: var(--text) !important;
     opacity: .55;
@@ -169,11 +169,11 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 
 /* ---------- ALERTS ---------- */
 [data-testid="stAlert"] {{
-    border-radius: 12px !important;
+    border-radius: .75rem !important;
     font-weight: 600;
 }}
-.alert {{ display: flex; align-items: center; gap: 10px; background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 11px 16px; margin-bottom: 8px; }}
-.alert .text {{ font-size: 13.5px; font-weight: 600; color: var(--accent-deep); }}
+.alert {{ display: flex; align-items: center; gap: .625rem; background: var(--accent-soft); border: 1px solid var(--border); border-radius: .75rem; padding: .6875rem 1rem; margin-bottom: .5rem; }}
+.alert .text {{ font-size: .84375rem; font-weight: 600; color: var(--accent-deep); }}
 .alert span:first-child {{ cursor: help; }}
 
 /* alert-warning intentionally has no rules of its own -- the base .alert
@@ -181,11 +181,11 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .alert-error {{
     background: var(--alert-error-bg);
     border: 2px solid var(--alert-error-border);
-    padding: 10px 16px;
+    padding: .625rem 1rem;
     box-shadow: 0 2px 14px var(--alert-error-shadow);
     animation: alert-pulse 2.6s ease-in-out infinite;
 }}
-.alert-error .text {{ color: var(--alert-error-text); font-weight: 700; font-size: 14px; }}
+.alert-error .text {{ color: var(--alert-error-text); font-weight: 700; font-size: .875rem; }}
 
 @keyframes alert-pulse {{
     0%, 100% {{ box-shadow: 0 2px 14px var(--alert-error-shadow); }}
@@ -196,7 +196,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 }}
 
 /* ---------- APP HEADER ---------- */
-.st-key-app_header {{ margin-bottom: 22px; }}
+.st-key-app_header {{ margin-bottom: 1.375rem; }}
 .st-key-app_header [data-testid="stHorizontalBlock"] {{
     align-items: center;
 }}
@@ -206,7 +206,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
    by default - that stretching is what left uneven dead-space gaps between the groups. A fixed
    gap on the flex container then gives consistent, tight spacing regardless of content width. */
 .st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] {{
-    gap: 22px !important;
+    gap: 1.375rem !important;
     flex-wrap: nowrap;
 }}
 .st-key-app_header [data-testid="stHorizontalBlock"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
@@ -215,14 +215,14 @@ html, [data-testid="stAppViewContainer"], .stApp {{
     min-width: 0 !important;
 }}
 .st-key-app_header [data-testid="stCaptionContainer"] {{
-    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
-    opacity: .5; color: var(--text); margin-top: 8px; white-space: nowrap;
+    font-size: .6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    opacity: .5; color: var(--text); margin-top: .5rem; white-space: nowrap;
 }}
 .st-key-app_header [data-testid="stSegmentedControl"] div[role="radiogroup"] {{
-    padding: 2px;
+    padding: .125rem;
 }}
 .st-key-app_header [data-testid="stSegmentedControl"] label {{
-    padding: 4px 8px !important;
+    padding: .25rem .5rem !important;
 }}
 /* Below the mobile breakpoint, stack the control row (season / auto-refresh / language / unit)
    into four rows in DOM order: season alone, refresh alone, then language + unit sharing a row.
@@ -231,8 +231,8 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 @media (max-width: 640px) {{
     .st-key-header_controls {{
         border-top: 1px solid var(--border);
-        padding-top: 12px;
-        margin-top: 12px;
+        padding-top: .75rem;
+        margin-top: .75rem;
     }}
     /* Anchored with a direct-child chain (> ... > ...), not an open-ended descendant
        selector, so this only ever matches the season/refresh/lang/unit row itself -
@@ -244,7 +244,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
        Streamlit's public docs. */
     .st-key-header_controls > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] {{
         flex-wrap: wrap !important;
-        row-gap: 12px;
+        row-gap: .75rem;
     }}
     /* Season swatches (1st column) and the refresh group (2nd column) each break onto
        their own full-width row; language and unit (3rd/4th) are left to share the row
@@ -266,38 +266,38 @@ html, [data-testid="stAppViewContainer"], .stApp {{
     .st-key-refresh_group > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] {{
         flex-wrap: nowrap !important;
         align-items: center;
-        gap: 8px;
+        gap: .5rem;
     }}
     .st-key-refresh_group > [data-testid="stLayoutWrapper"] > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
         flex: 0 1 auto;
         min-width: 0;
     }}
     .st-key-refresh_group label p {{
-        font-size: 12px;
+        font-size: .75rem;
     }}
     .st-key-refresh_group .stButton button {{
-        height: 32px !important;
-        min-height: 32px !important;
-        padding: 0 10px !important;
-        font-size: 11.5px !important;
+        height: 2rem !important;
+        min-height: 2rem !important;
+        padding: 0 .625rem !important;
+        font-size: .71875rem !important;
     }}
 }}
-.brand-row {{ display: flex; align-items: center; gap: 14px; }}
+.brand-row {{ display: flex; align-items: center; gap: .875rem; }}
 .brand-icon {{
-    width: 44px; height: 44px; border-radius: 12px; background: var(--accent-grad);
-    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    width: 2.75rem; height: 2.75rem; border-radius: .75rem; background: var(--accent-grad);
+    display: flex; align-items: center; justify-content: center; font-size: 1.375rem;
     box-shadow: 0 4px 14px var(--accent-shadow); flex-shrink: 0; cursor: help;
 }}
-.brand-title {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 21px; letter-spacing: -.01em; color: var(--text); }}
-.brand-sub {{ font-size: 12.5px; opacity: .55; font-weight: 500; color: var(--text); }}
+.brand-title {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 1.3125rem; letter-spacing: -.01em; color: var(--text); }}
+.brand-sub {{ font-size: .78125rem; opacity: .55; font-weight: 500; color: var(--text); }}
 
 /* ---------- SEARCH / LOCATION CARD ---------- */
 .st-key-location_card {{
     background: var(--surface);
-    border-radius: 16px;
+    border-radius: 1rem;
     border: 1px solid var(--border);
     box-shadow: 0 2px 12px var(--card-shadow);
-    padding: 20px 22px;
+    padding: 1.25rem 1.375rem;
 }}
 .st-key-location_card [data-testid="stVerticalBlockBorderWrapper"] {{
     border: none !important;
@@ -307,57 +307,57 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 }}
 .st-key-search_top [data-testid="stHorizontalBlock"] {{
     align-items: center;
-    gap: 14px;
+    gap: .875rem;
 }}
 .st-key-search_top [data-testid="stCaptionContainer"] {{
-    font-size: 12.5px; font-weight: 400; opacity: .6; color: var(--text);
+    font-size: .78125rem; font-weight: 400; opacity: .6; color: var(--text);
     text-transform: none; letter-spacing: normal; white-space: nowrap;
 }}
 .st-key-search_top [data-testid="stCustomComponentV1"] {{
-    width: 38px !important; max-width: 38px !important; height: 38px; border-radius: 10px;
+    width: 2.375rem !important; max-width: 2.375rem !important; height: 2.375rem; border-radius: .625rem;
     background: var(--accent-soft);
     border: 1px solid var(--border); overflow: hidden;
 }}
-.location-divider {{ display: flex; align-items: center; gap: 12px; }}
-.location-divider-line {{ flex: 1; height: 1px; background: var(--border); }}
+.location-divider {{ display: flex; align-items: center; gap: .75rem; }}
+.location-divider-line {{ flex: 1; height: .0625rem; background: var(--border); }}
 .location-divider-text {{ font-size: .78rem; font-weight: 500; opacity: .55; white-space: nowrap; color: var(--text); }}
-.st-key-search_action .stButton button {{ margin-top: 27px; }}
+.st-key-search_action .stButton button {{ margin-top: 1.6875rem; }}
 
 /* ---------- LOCATION LINE ---------- */
-.location {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }}
+.location {{ display: flex; align-items: baseline; gap: .5rem; margin-bottom: 1rem; }}
 .location span:first-child {{ cursor: help; }}
-.location .name {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 19px; color: var(--text); }}
+.location .name {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 1.1875rem; color: var(--text); }}
 
 /* ---------- HERO PANEL ---------- */
 .hero {{
-    background: var(--hero-grad); border: 1px solid var(--border); border-radius: 18px;
-    padding: 26px 28px; box-shadow: 0 4px 20px var(--card-shadow); margin-bottom: 4px;
-    display: grid; grid-template-columns: minmax(220px,1fr) 2fr; gap: 24px; align-items: center;
+    background: var(--hero-grad); border: 1px solid var(--border); border-radius: 1.125rem;
+    padding: 1.625rem 1.75rem; box-shadow: 0 4px 20px var(--card-shadow); margin-bottom: .25rem;
+    display: grid; grid-template-columns: minmax(13.75rem,1fr) 2fr; gap: 1.5rem; align-items: center;
 }}
 @media (max-width: 760px) {{ .hero {{ grid-template-columns: 1fr; }} }}
-.hero-main {{ display: flex; align-items: center; gap: 16px; }}
-.hero-emoji {{ font-size: 56px; line-height: 1; cursor: help; }}
-.hero-temp {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; color: var(--text); }}
-.hero-feels {{ font-size: 13px; opacity: .65; font-weight: 500; margin-top: 4px; color: var(--text); }}
-.hero-desc {{ font-size: 13.5px; font-weight: 700; color: var(--accent-deep); margin-top: 2px; }}
-.stat-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }}
-.stat-chip {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 11px 12px; }}
-.stat-chip .label {{ font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .5; margin-bottom: 4px; color: var(--text); }}
-.stat-chip .value {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 17px; color: var(--text); }}
+.hero-main {{ display: flex; align-items: center; gap: 1rem; }}
+.hero-emoji {{ font-size: 3.5rem; line-height: 1; cursor: help; }}
+.hero-temp {{ font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 2.75rem; line-height: 1; color: var(--text); }}
+.hero-feels {{ font-size: .8125rem; opacity: .65; font-weight: 500; margin-top: .25rem; color: var(--text); }}
+.hero-desc {{ font-size: .84375rem; font-weight: 700; color: var(--accent-deep); margin-top: .125rem; }}
+.stat-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(6.875rem, 1fr)); gap: .625rem; }}
+.stat-chip {{ background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: .6875rem .75rem; }}
+.stat-chip .label {{ font-size: .65625rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .5; margin-bottom: .25rem; color: var(--text); }}
+.stat-chip .value {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 1.0625rem; color: var(--text); }}
 
 /* ---------- 24H GRID ---------- */
-.hour-strip {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }}
-.hour-card {{ position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }}
-.hour-card .time {{ font-size: 11.5px; font-weight: 700; opacity: .6; margin-bottom: 4px; color: var(--text); }}
-.hour-card .emoji {{ font-size: 24px; margin-bottom: 2px; cursor: help; }}
-.hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
-.hour-card .meta {{ display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }}
-.hour-card .meta span {{ font-size: 10.5px; opacity: .55; font-weight: 600; color: var(--text); cursor: help; }}
-.hour-card .storm-badge {{ top: 4px; right: 4px; padding: 1px 5px; font-size: 9px; }}
-.hour-card .next-day-badge {{ top: 4px; left: 50%; transform: translateX(-50%); padding: 1px 5px; font-size: 9px; background: var(--border); color: var(--text); opacity: .75; }}
+.hour-strip {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(5.625rem, 1fr)); gap: .625rem; }}
+.hour-card {{ position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: .75rem; padding: .75rem .625rem; text-align: center; }}
+.hour-card .time {{ font-size: .71875rem; font-weight: 700; opacity: .6; margin-bottom: .25rem; color: var(--text); }}
+.hour-card .emoji {{ font-size: 1.5rem; margin-bottom: .125rem; cursor: help; }}
+.hour-card .temp {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: .9375rem; color: var(--text); }}
+.hour-card .meta {{ display: flex; flex-direction: column; gap: .125rem; margin-top: .25rem; }}
+.hour-card .meta span {{ font-size: .65625rem; opacity: .55; font-weight: 600; color: var(--text); cursor: help; }}
+.hour-card .storm-badge {{ top: .25rem; right: .25rem; padding: .0625rem .3125rem; font-size: .5625rem; }}
+.hour-card .next-day-badge {{ top: .25rem; left: 50%; transform: translateX(-50%); padding: .0625rem .3125rem; font-size: .5625rem; background: var(--border); color: var(--text); opacity: .75; }}
 /* The badge floats above the card's normal flow, so without this the "Tomorrow"
    badge sits right on top of the time label instead of above it. */
-.hour-card:has(.next-day-badge) .time {{ margin-top: 14px; }}
+.hour-card:has(.next-day-badge) .time {{ margin-top: .875rem; }}
 
 .hour-card.hour-card-storm {{ background: var(--storm-bg); border: 1px solid var(--storm-border); box-shadow: 0 4px 14px var(--storm-shadow); }}
 .hour-card.hour-card-storm .meta span {{ opacity: .85; }}
@@ -373,15 +373,15 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-card-storm-severe .storm-badge {{ background: var(--storm-severe-border); }}
 
 /* ---------- 7-DAY CARDS ---------- */
-.day-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }}
-.day-card {{ position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 14px; text-align: center; }}
+.day-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(9.375rem, 1fr)); gap: .75rem; }}
+.day-card {{ position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: .875rem; padding: 1rem .875rem; text-align: center; }}
 .day-card:hover {{ transform: translateY(-2px); box-shadow: 0 6px 16px var(--card-shadow); }}
-.day-card .day {{ font-size: 12.5px; font-weight: 700; margin-bottom: 6px; color: var(--text); }}
-.day-card .emoji {{ font-size: 32px; margin-bottom: 6px; cursor: help; }}
-.day-card .desc {{ font-size: 11.5px; font-weight: 600; color: var(--accent-deep); margin-bottom: 10px; min-height: 14px; }}
-.day-card .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 15px; color: var(--text); }}
+.day-card .day {{ font-size: .78125rem; font-weight: 700; margin-bottom: .375rem; color: var(--text); }}
+.day-card .emoji {{ font-size: 2rem; margin-bottom: .375rem; cursor: help; }}
+.day-card .desc {{ font-size: .71875rem; font-weight: 600; color: var(--accent-deep); margin-bottom: .625rem; min-height: .875rem; }}
+.day-card .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: .9375rem; color: var(--text); }}
 .day-card .temps .min {{ opacity: .45; font-weight: 600; }}
-.day-card .meta {{ display: flex; justify-content: center; gap: 10px; font-size: 10.5px; opacity: .55; font-weight: 600; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; color: var(--text); }}
+.day-card .meta {{ display: flex; justify-content: center; gap: .625rem; font-size: .65625rem; opacity: .55; font-weight: 600; margin-top: .5rem; border-top: 1px solid var(--border); padding-top: .5rem; color: var(--text); }}
 .day-card .meta span {{ cursor: help; }}
 
 /* ---------- STORM SEVERITY TREATMENT ---------- */
@@ -401,29 +401,29 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .day-card.day-card-storm-severe:hover {{ box-shadow: var(--storm-severe-shadow-hover); }}
 
 .storm-badge, .next-day-badge {{ position: absolute; border-radius: 999px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }}
-.storm-badge {{ top: 8px; right: 8px; padding: 2px 7px; font-size: 10.5px; color: #fff; }}
+.storm-badge {{ top: .5rem; right: .5rem; padding: .125rem .4375rem; font-size: .65625rem; color: #fff; }}
 .day-card-storm .storm-badge {{ background: var(--storm-badge-bg); }}
 .day-card-storm-severe .storm-badge {{ background: var(--storm-severe-border); }}
 .st-key-forecast_tab7 .stButton button {{
-    margin-top: 8px; height: 32px !important; min-height: 32px !important; font-size: 11.5px !important;
+    margin-top: .5rem; height: 2rem !important; min-height: 2rem !important; font-size: .71875rem !important;
 }}
 
 /* ---------- 14-DAY COMPACT ROWS ---------- */
 .st-key-forecast_tab14 {{
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border); border-radius: .875rem; overflow: hidden;
 }}
 .row-14 {{
-    display: grid; grid-template-columns: 110px 32px 1fr 90px 70px 80px; align-items: center;
-    gap: 12px; padding: 10px 18px; border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 6.875rem 2rem 1fr 5.625rem 4.375rem 5rem; align-items: center;
+    gap: .75rem; padding: .625rem 1.125rem; border-bottom: 1px solid var(--border);
 }}
-.row-14 .day {{ font-size: 12.5px; font-weight: 700; color: var(--text); }}
-.row-14 .emoji {{ font-size: 20px; cursor: help; }}
-.row-14 .desc {{ font-size: 12.5px; font-weight: 600; opacity: .75; color: var(--text); }}
-.row-14 .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 13.5px; text-align: right; color: var(--text); }}
+.row-14 .day {{ font-size: .78125rem; font-weight: 700; color: var(--text); }}
+.row-14 .emoji {{ font-size: 1.25rem; cursor: help; }}
+.row-14 .desc {{ font-size: .78125rem; font-weight: 600; opacity: .75; color: var(--text); }}
+.row-14 .temps {{ font-family: 'Manrope', sans-serif; font-weight: 700; font-size: .84375rem; text-align: right; color: var(--text); }}
 .row-14 .temps .min {{ opacity: .45; font-weight: 600; }}
-.row-14 .rain, .row-14 .wind {{ font-size: 11.5px; opacity: .6; font-weight: 600; text-align: right; color: var(--text); cursor: help; }}
+.row-14 .rain, .row-14 .wind {{ font-size: .71875rem; opacity: .6; font-weight: 600; text-align: right; color: var(--text); cursor: help; }}
 .st-key-forecast_tab14 .stButton button {{
-    height: 32px !important; min-height: 32px !important; padding: 0 10px !important; font-size: 11.5px !important;
+    height: 2rem !important; min-height: 2rem !important; padding: 0 .625rem !important; font-size: .71875rem !important;
 }}
 /* The 6 fixed-width grid columns above need ~380px before the flexible 1fr
    column even gets space, which overflows a phone viewport. Below the mobile
@@ -434,9 +434,9 @@ html, [data-testid="stAppViewContainer"], .stApp {{
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        column-gap: 10px;
-        row-gap: 4px;
-        padding: 12px 16px;
+        column-gap: .625rem;
+        row-gap: .25rem;
+        padding: .75rem 1rem;
     }}
     .row-14 .emoji {{ order: 1; }}
     .row-14 .day {{ order: 2; flex: 1 1 auto; min-width: 0; }}
@@ -447,7 +447,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 }}
 
 /* ---------- RADAR ---------- */
-.radar-frame {{ border-radius: 14px; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 16px var(--card-shadow); }}
-.radar-frame iframe {{ display: block; width: 100%; height: 560px; border: 0; }}
+.radar-frame {{ border-radius: .875rem; overflow: hidden; border: 1px solid var(--border); box-shadow: 0 4px 16px var(--card-shadow); }}
+.radar-frame iframe {{ display: block; width: 100%; height: 35rem; border: 0; }}
 </style>
 """
