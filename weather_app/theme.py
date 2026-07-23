@@ -321,10 +321,11 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-card .meta {{ display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }}
 .hour-card .meta span {{ font-size: 10.5px; opacity: .55; font-weight: 600; color: var(--text); cursor: help; }}
 .hour-card .storm-badge {{ top: 4px; right: 4px; padding: 1px 5px; font-size: 9px; }}
-.hour-card .next-day-badge {{ position: absolute; top: 4px; left: 4px; padding: 1px 5px; border-radius: 999px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: var(--border); color: var(--text); opacity: .75; }}
+.hour-card .next-day-badge {{ top: 4px; left: 4px; padding: 1px 5px; font-size: 9px; background: var(--border); color: var(--text); opacity: .75; }}
 
 .hour-card.hour-card-storm {{ background: var(--storm-bg); border: 1px solid var(--storm-border); box-shadow: 0 4px 14px var(--storm-shadow); }}
 .hour-card.hour-card-storm .meta span {{ opacity: .85; }}
+.hour-card.hour-card-storm .next-day-badge {{ opacity: .85; }}
 
 .hour-card.hour-card-storm-severe {{ background: var(--storm-severe-bg); border: 2px solid var(--storm-severe-border); box-shadow: 0 8px 22px var(--storm-severe-shadow); }}
 .hour-card.hour-card-storm-severe .time,
@@ -363,7 +364,8 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .day-card.day-card-storm-severe .meta {{ border-top-color: rgba(255,255,255,.35); }}
 .day-card.day-card-storm-severe:hover {{ box-shadow: var(--storm-severe-shadow-hover); }}
 
-.storm-badge {{ position: absolute; top: 8px; right: 8px; padding: 2px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #fff; }}
+.storm-badge, .next-day-badge {{ position: absolute; border-radius: 999px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }}
+.storm-badge {{ top: 8px; right: 8px; padding: 2px 7px; font-size: 10.5px; color: #fff; }}
 .day-card-storm .storm-badge {{ background: var(--storm-badge-bg); }}
 .day-card-storm-severe .storm-badge {{ background: var(--storm-severe-border); }}
 .st-key-forecast_tab7 .stButton button {{
