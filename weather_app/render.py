@@ -113,11 +113,9 @@ def generate_hour_card_html(
 
     storm_class, storm_badge = _resolve_storm_treatment(resolved_code, "hour-card", lang)
 
-    next_day_badge = (
-        f"<div class='next-day-badge'>{t['card_next_day']}</div>"
-        if today_date is not None and not date_str.startswith(today_date)
-        else ""
-    )
+    is_next_day = today_date is not None and not date_str.startswith(today_date)
+    next_day_badge = f"<div class='next-day-badge'>{t['card_next_day']}</div>" if is_next_day else ""
+    next_day_class = " hour-card-next-day" if is_next_day else ""
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -128,7 +126,7 @@ def generate_hour_card_html(
     wind_str = format_wind_speed(wind, unit, lang)
 
     return (
-        f"<div class='hour-card{storm_class}'>"
+        f"<div class='hour-card{storm_class}{next_day_class}'>"
         f"{storm_badge}"
         f"{next_day_badge}"
         f"<div class='time'>{label}</div>"

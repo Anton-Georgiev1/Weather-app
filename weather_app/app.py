@@ -10,7 +10,7 @@ from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, 
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, resolve_hour_time_filter, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.storage import load_last_language, load_last_location, save_last_language, save_last_location
 from weather_app.theme import get_theme_css
@@ -426,22 +426,10 @@ def main():
                     "evening": t["time_filter_evening"],
                     "night": t["time_filter_night"],
                 }
-                default_hour_time_filter = get_default_hour_time_filter(current_time)
-                # Read the pill's own key, not the "hour_time_filter" mirror below --
-                # on the run where the user just clicked a new pill, Streamlit has
-                # already applied that click to hour_time_filter_pills before this
-                # code runs, while the mirror still holds the *previous* run's value.
-                # Resolving against the stale mirror would see "still equals the old
-                # auto segment" and silently overwrite the click that just happened.
-                current_pill_value = st.session_state.get("hour_time_filter_pills")
-                resolved_hour_time_filter = resolve_hour_time_filter(
-                    current_pill_value,
-                    st.session_state.get("hour_time_filter_auto_segment"),
-                    default_hour_time_filter,
-                )
-                if resolved_hour_time_filter != current_pill_value:
-                    st.session_state.hour_time_filter_pills = resolved_hour_time_filter
-                st.session_state.hour_time_filter_auto_segment = default_hour_time_filter
+                # Re-anchor the pill to the current hour on first load and on every
+                # explicit refresh; otherwise leave whatever the user last picked alone.
+                if refresh_clicked or "hour_time_filter_pills" not in st.session_state:
+                    st.session_state.hour_time_filter_pills = get_default_hour_time_filter(current_time)
                 # No `default=` here: hour_time_filter_pills (this widget's own key) is
                 # always pre-set above before this call, either freshly this run or by
                 # its own prior render, so a default would be redundant -- and passing

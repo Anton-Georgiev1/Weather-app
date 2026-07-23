@@ -357,7 +357,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-card .next-day-badge {{ top: .25rem; left: 50%; transform: translateX(-50%); padding: .0625rem .3125rem; font-size: .5625rem; background: var(--border); color: var(--text); opacity: .75; }}
 /* The badge floats above the card's normal flow, so without this the "Tomorrow"
    badge sits right on top of the time label instead of above it. */
-.hour-card:has(.next-day-badge) .time {{ margin-top: .875rem; }}
+.hour-card-next-day .time {{ margin-top: .875rem; }}
 
 .hour-card.hour-card-storm {{ background: var(--storm-bg); border: 1px solid var(--storm-border); box-shadow: 0 4px 14px var(--storm-shadow); }}
 .hour-card.hour-card-storm .meta span {{ opacity: .85; }}
