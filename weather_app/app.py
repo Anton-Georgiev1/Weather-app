@@ -10,7 +10,7 @@ from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, 
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, resolve_hour_time_filter, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.storage import load_last_language, load_last_location, save_last_language, save_last_location
 from weather_app.theme import get_theme_css
@@ -410,8 +410,19 @@ def main():
                     "evening": t["time_filter_evening"],
                     "night": t["time_filter_night"],
                 }
-                if "hour_time_filter" not in st.session_state:
-                    st.session_state.hour_time_filter = get_default_hour_time_filter(current_time)
+                default_hour_time_filter = get_default_hour_time_filter(current_time)
+                st.session_state.hour_time_filter = resolve_hour_time_filter(
+                    st.session_state.get("hour_time_filter"),
+                    st.session_state.get("hour_time_filter_auto_segment"),
+                    default_hour_time_filter,
+                )
+                # A widget's own key always wins over `default=` once it has been
+                # rendered once, so the pre-set here is what actually re-syncs the
+                # pill display on refresh -- `default=` below only matters the very
+                # first time this widget's key is seen.
+                if st.session_state.hour_time_filter == default_hour_time_filter:
+                    st.session_state.hour_time_filter_pills = default_hour_time_filter
+                st.session_state.hour_time_filter_auto_segment = default_hour_time_filter
                 st.session_state.hour_time_filter = st.pills(
                     t["time_filter_label"],
                     options=time_filter_keys,

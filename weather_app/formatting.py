@@ -82,6 +82,14 @@ def get_default_hour_time_filter(current_time: str | None) -> str:
         return "all"
     return get_time_of_day_segment(current_time) or "all"
 
+def resolve_hour_time_filter(current_filter: str | None, last_auto_segment: str | None, new_auto_segment: str) -> str:
+    """Re-sync the hour-of-day pill to the latest current-time segment on refresh,
+    unless the user has manually picked a different filter since the last sync --
+    in which case their choice is left alone."""
+    if current_filter is None or current_filter == last_auto_segment:
+        return new_auto_segment
+    return current_filter
+
 def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any = None) -> Any:
     """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
     if not isinstance(data_dict, dict):

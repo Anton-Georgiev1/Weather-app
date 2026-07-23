@@ -10,7 +10,7 @@ from weather_app.alerts import (
     summarize_segment_risk,
 )
 from weather_app.config import GEOCODING_API_URL, REVERSE_GEOCODING_API_URL, WEATHER_API_URL
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, resolve_hour_time_filter, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.weather_api import build_location_from_coordinates, get_coordinates, get_weather_data, reverse_geocode
 
@@ -627,6 +627,23 @@ def test_get_default_hour_time_filter_falls_back_to_all():
     """Missing or unparseable current time must fall back to the 'all' pill."""
     assert get_default_hour_time_filter(None) == "all"
     assert get_default_hour_time_filter("") == "all"
+
+
+def test_resolve_hour_time_filter_first_load_uses_new_segment():
+    """With no filter set yet (first ever render), adopt the new auto segment."""
+    assert resolve_hour_time_filter(None, None, "morning") == "morning"
+
+
+def test_resolve_hour_time_filter_refresh_resyncs_to_new_segment():
+    """On refresh, an untouched filter must follow time forward (e.g. Refresh Now
+    ticking from morning into afternoon) so the preselect stays current."""
+    assert resolve_hour_time_filter("morning", "morning", "afternoon") == "afternoon"
+
+
+def test_resolve_hour_time_filter_keeps_manual_choice_across_refresh():
+    """A manual pick that differs from the last auto segment must survive a refresh,
+    even if the new auto segment has since changed."""
+    assert resolve_hour_time_filter("night", "morning", "afternoon") == "night"
 
 
 # --- Bulgarian Translation & Date Formatting Tests ---
