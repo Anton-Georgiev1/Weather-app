@@ -278,11 +278,27 @@ def main():
         t = TRANSLATIONS[lang]
 
         with refresh_button_slot:
-            st.button(t["refresh_now_button"], key="refresh_now_button")
+            button_placeholder = st.empty()
+            with button_placeholder:
+                refresh_clicked = st.button(t["refresh_now_button"], key="refresh_now_button")
 
         lat, lon = location["latitude"], location["longitude"]
-        with st.spinner(t["fetching"]):
-            f_data = get_weather_data(lat, lon)
+        if refresh_clicked:
+            # Streamlit flushes each element as it's created rather than only at
+            # the end of the run (the same reason st.spinner below is visible
+            # while its block executes), so swapping the placeholder to this
+            # disabled button here shows it *before* the blocking fetch call --
+            # then swapping it back after leaves the button usable again once
+            # this run finishes, all without a second fetch or an extra rerun.
+            with button_placeholder:
+                st.button(t["refreshing_button"], key="refresh_now_button_loading", disabled=True)
+            with st.spinner(t["fetching"]):
+                f_data = get_weather_data(lat, lon)
+            with button_placeholder:
+                st.button(t["refresh_now_button"], key="refresh_now_button_idle")
+        else:
+            with st.spinner(t["fetching"]):
+                f_data = get_weather_data(lat, lon)
 
         if f_data:
             hourly = f_data.get("hourly", {})

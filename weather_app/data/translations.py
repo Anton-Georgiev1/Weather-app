@@ -70,6 +70,7 @@ TRANSLATIONS = {
 
         # Data refresh strings
         "refresh_now_button": "🔄 Refresh now",
+        "refreshing_button": "⏳ Refreshing…",
         "auto_refresh_label": "Auto-refresh",
         "auto_refresh_help": "Automatically refresh weather data every 15 minutes",
         "last_updated": "Last updated {time}",
@@ -145,6 +146,7 @@ TRANSLATIONS = {
 
         # Data refresh strings
         "refresh_now_button": "🔄 Обнови сега",
+        "refreshing_button": "⏳ Обновяване…",
         "auto_refresh_label": "Автообновяване",
         "auto_refresh_help": "Автоматично обновяване на данните за времето на всеки 15 минути",
         "last_updated": "Последно обновено {time}",

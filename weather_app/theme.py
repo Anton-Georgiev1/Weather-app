@@ -74,6 +74,39 @@ html, [data-testid="stAppViewContainer"], .stApp {{
     font-weight: 700 !important;
 }}
 
+/* Refresh button loading state (the "refresh_now_button_loading" key that
+   briefly replaces the normal button while its fetch is in flight): a filling
+   bar sweeps behind the label, and the button is actually disabled (not just
+   styled to look that way) so it can't be clicked again mid-request. */
+.st-key-refresh_now_button_loading button {{
+    position: relative;
+    overflow: hidden;
+    cursor: progress !important;
+    opacity: 1 !important;
+    border: none !important;
+}}
+.st-key-refresh_now_button_loading button [data-testid="stMarkdownContainer"] {{
+    position: relative;
+    z-index: 1;
+    color: #fff !important;
+}}
+.st-key-refresh_now_button_loading button::before {{
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--accent-grad);
+    transform: scaleX(0);
+    transform-origin: left;
+    animation: refresh-btn-fill 1.1s ease-in-out infinite;
+}}
+@keyframes refresh-btn-fill {{
+    0% {{ transform: scaleX(0); }}
+    100% {{ transform: scaleX(1); }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+    .st-key-refresh_now_button_loading button::before {{ animation: none; transform: scaleX(1); }}
+}}
+
 /* ---------- TEXT INPUTS ---------- */
 [data-testid="stTextInput"] input {{
     background: var(--surface) !important;
