@@ -411,7 +411,8 @@ def main():
                     "night": t["time_filter_night"],
                 }
                 if "hour_time_filter" not in st.session_state:
-                    st.session_state.hour_time_filter = "all"
+                    current_segment = get_time_of_day_segment(current_time) if current_time else None
+                    st.session_state.hour_time_filter = current_segment or "all"
                 st.session_state.hour_time_filter = st.pills(
                     t["time_filter_label"],
                     options=time_filter_keys,
