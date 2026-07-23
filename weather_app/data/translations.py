@@ -52,6 +52,7 @@ TRANSLATIONS = {
         "weather_advisory": "Weather Advisory",
         "card_storm_badge": "Storm",
         "card_storm_severe_badge": "Severe",
+        "card_next_day": "Tomorrow",
         "unknown": "Unknown",
 
         # Geolocation strings
@@ -126,6 +127,7 @@ TRANSLATIONS = {
         "weather_advisory": "Предупреждение за времето",
         "card_storm_badge": "Буря",
         "card_storm_severe_badge": "Опасно",
+        "card_next_day": "Утре",
         "unknown": "Неизвестно",
 
         # Geolocation strings

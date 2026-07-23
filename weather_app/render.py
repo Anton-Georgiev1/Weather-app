@@ -90,13 +90,18 @@ def generate_hour_card_html(
     temp: float | None,
     wind: float | None = None,
     lang: str = "en",
-    unit: str = "C"
+    unit: str = "C",
+    today_date: str | None = None
 ) -> str:
     """Generate the HTML for a single compact 24-hour strip card, matching the design's `.hour-card`.
     Rain chance and wind speed each get an icon plus a tooltip (matching the `.day-card` `.meta`
     pattern) so the percentage reads as "chance of rain" rather than an unlabeled number.
     Stormy codes (see DAY_CARD_STORM_CODES / DAY_CARD_STORM_SEVERE_CODES) get the same severity
-    modifier class and badge treatment as the 7-day cards, so a stormy hour stands out too."""
+    modifier class and badge treatment as the 7-day cards, so a stormy hour stands out too.
+
+    today_date (optional, "YYYY-MM-DD") flags a card whose date doesn't match it with a
+    "Tomorrow" badge -- the 24h strip's window can cross midnight, and without a date the
+    card would show only "06:00" and be indistinguishable from today's own 06:00."""
     try:
         label = format_date(date_str, "%H:00", lang)
     except Exception:
@@ -107,6 +112,12 @@ def generate_hour_card_html(
     t = TRANSLATIONS[lang]
 
     storm_class, storm_badge = _resolve_storm_treatment(resolved_code, "hour-card", lang)
+
+    next_day_badge = (
+        f"<div class='next-day-badge'>{t['card_next_day']}</div>"
+        if today_date is not None and not date_str.startswith(today_date)
+        else ""
+    )
 
     try:
         rain_prob_val = int(rain_prob)  # pyright: ignore[reportArgumentType]
@@ -119,6 +130,7 @@ def generate_hour_card_html(
     return (
         f"<div class='hour-card{storm_class}'>"
         f"{storm_badge}"
+        f"{next_day_badge}"
         f"<div class='time'>{label}</div>"
         f"<div class='emoji' title='{desc}'>{emoji}</div>"
         f"<div class='temp'>{temp_str}</div>"

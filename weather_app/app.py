@@ -449,7 +449,8 @@ def main():
                             temp=safe_get(hourly, "temperature_2m", idx),
                             wind=safe_get(hourly, "wind_speed_10m", idx),
                             lang=lang,
-                            unit=unit
+                            unit=unit,
+                            today_date=current_time[:10] if current_time else None
                         )
                         for idx in hour_indices
                     )

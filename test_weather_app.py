@@ -394,6 +394,27 @@ def test_generate_hour_card_html_smoke():
     assert "💨 15.0 km/h" in result
 
 
+def test_generate_hour_card_html_shows_next_day_badge_when_date_differs():
+    """When the 24h strip's window crosses midnight, a card for tomorrow's hour
+    must be flagged so it isn't mistaken for today's own hour of the same clock time."""
+    result = generate_hour_card_html("2024-01-02T06:00", 0, 10, 20.0, wind=15.0, today_date="2024-01-01")
+    assert "next-day-badge" in result
+    assert "Tomorrow" in result
+
+
+def test_generate_hour_card_html_no_next_day_badge_for_same_day():
+    """A card for today's own hour must not get the next-day badge."""
+    result = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0, wind=15.0, today_date="2024-01-01")
+    assert "next-day-badge" not in result
+
+
+def test_generate_hour_card_html_no_next_day_badge_without_today_date():
+    """Callers that don't pass today_date (e.g. the smoke test above) must keep
+    seeing no badge, regardless of the card's own date."""
+    result = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0, wind=15.0)
+    assert "next-day-badge" not in result
+
+
 def test_generate_hour_card_html_storm_severe_tier():
     """Thunderstorm-with-hail/severe-thunderstorm codes get the darkest tier
     class and its badge, same as the 7-day cards."""

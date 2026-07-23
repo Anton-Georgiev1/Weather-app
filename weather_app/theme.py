@@ -321,6 +321,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-card .meta {{ display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }}
 .hour-card .meta span {{ font-size: 10.5px; opacity: .55; font-weight: 600; color: var(--text); cursor: help; }}
 .hour-card .storm-badge {{ top: 4px; right: 4px; padding: 1px 5px; font-size: 9px; }}
+.hour-card .next-day-badge {{ position: absolute; top: 4px; left: 4px; padding: 1px 5px; border-radius: 999px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; background: var(--border); color: var(--text); opacity: .75; }}
 
 .hour-card.hour-card-storm {{ background: var(--storm-bg); border: 1px solid var(--storm-border); box-shadow: 0 4px 14px var(--storm-shadow); }}
 .hour-card.hour-card-storm .meta span {{ opacity: .85; }}
@@ -329,6 +330,7 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 .hour-card.hour-card-storm-severe .time,
 .hour-card.hour-card-storm-severe .temp {{ color: #fff; }}
 .hour-card.hour-card-storm-severe .meta span {{ color: rgba(255,255,255,.85); opacity: 1; }}
+.hour-card.hour-card-storm-severe .next-day-badge {{ background: rgba(255,255,255,.85); color: var(--storm-severe-border); opacity: 1; }}
 
 .hour-card-storm .storm-badge {{ background: var(--storm-badge-bg); }}
 .hour-card-storm-severe .storm-badge {{ background: var(--storm-severe-border); }}
