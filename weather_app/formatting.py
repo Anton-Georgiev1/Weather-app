@@ -60,6 +60,18 @@ def format_wind_speed(speed_kmh: float | None, unit: str, lang: str = "en") -> s
     display_value = speed_kmh * 0.621371 if unit == "F" else speed_kmh
     return f"{round(display_value, 1)} {wind_unit}"
 
+def get_wind_speed_class(speed_kmh: float | None) -> str:
+    """Classify a raw km/h wind reading into a CSS severity tier so the displayed value
+    can be color-coded. Always classifies off the underlying km/h figure, independent
+    of the km/h-to-mph conversion format_wind_speed applies for display."""
+    if speed_kmh is None or speed_kmh < 20:
+        return ""
+    if speed_kmh < 40:
+        return "wind-breezy"
+    if speed_kmh < 70:
+        return "wind-strong"
+    return "wind-severe"
+
 def get_time_of_day_segment(time_str: str) -> str | None:
     """Classify an ISO hourly timestamp into a morning/afternoon/evening/night band."""
     try:

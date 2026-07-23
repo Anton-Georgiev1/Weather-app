@@ -34,6 +34,9 @@ def get_theme_css(theme: dict[str, str]) -> str:
     --storm-severe-border: color-mix(in srgb, var(--accent-deep) 50%, black 50%);
     --storm-severe-shadow: color-mix(in srgb, var(--accent-shadow) 70%, black 30%);
     --storm-severe-shadow-hover: 0 10px 26px color-mix(in srgb, var(--accent-shadow) 70%, black 30%);
+    --wind-breezy: color-mix(in srgb, var(--text) 35%, #d9a017 65%);
+    --wind-strong: color-mix(in srgb, var(--text) 20%, #e8710a 80%);
+    --wind-severe: color-mix(in srgb, var(--text) 10%, #c62828 90%);
 }}
 
 html, [data-testid="stAppViewContainer"], .stApp {{
@@ -194,6 +197,14 @@ html, [data-testid="stAppViewContainer"], .stApp {{
 @media (prefers-reduced-motion: reduce) {{
     .alert-error {{ animation: none; }}
 }}
+
+/* ---------- WIND SEVERITY ---------- */
+/* Applied to the wind reading everywhere it's shown (hero stat chip, hour/day
+   cards, 14-day rows) so stronger wind reads as visibly more urgent, the same
+   way storm codes get a darker treatment as severity increases. */
+.wind-breezy {{ color: var(--wind-breezy); }}
+.wind-strong {{ color: var(--wind-strong); font-weight: 700; }}
+.wind-severe {{ color: var(--wind-severe); font-weight: 700; }}
 
 /* ---------- APP HEADER ---------- */
 .st-key-app_header {{ margin-bottom: 1.375rem; }}

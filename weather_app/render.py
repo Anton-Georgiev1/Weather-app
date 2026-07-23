@@ -1,7 +1,7 @@
 from weather_app.alerts import DAY_CARD_STORM_CODES, DAY_CARD_STORM_SEVERE_CODES
 from weather_app.config import AlertSeverity
 from weather_app.data.translations import TRANSLATIONS
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_wmo_info
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_wind_speed_class, get_wmo_info
 
 
 def generate_forecast_row_html(
@@ -30,6 +30,7 @@ def generate_forecast_row_html(
         rain_prob_val = 0
 
     wind_str = format_wind_speed(wind, unit, lang)
+    wind_class = get_wind_speed_class(wind)
     max_t_str = format_temperature(max_t, unit)
     min_t_str = format_temperature(min_t, unit)
 
@@ -40,7 +41,7 @@ def generate_forecast_row_html(
         f"<div class='desc'>{desc}</div>"
         f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
         f"<div class='rain' title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</div>"
-        f"<div class='wind' title='{t['card_wind']}'>💨 {wind_str}</div>"
+        f"<div class='wind {wind_class}' title='{t['card_wind']}'>💨 {wind_str}</div>"
         "</div>"
     )
 
@@ -124,6 +125,7 @@ def generate_hour_card_html(
 
     temp_str = format_temperature(temp, unit)
     wind_str = format_wind_speed(wind, unit, lang)
+    wind_class = get_wind_speed_class(wind)
 
     return (
         f"<div class='hour-card{storm_class}{next_day_class}'>"
@@ -134,7 +136,7 @@ def generate_hour_card_html(
         f"<div class='temp'>{temp_str}</div>"
         "<div class='meta'>"
         f"<span title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</span>"
-        f"<span title='{t['card_wind']}'>💨 {wind_str}</span>"
+        f"<span class='{wind_class}' title='{t['card_wind']}'>💨 {wind_str}</span>"
         "</div>"
         "</div>"
     )
@@ -169,6 +171,7 @@ def generate_day_card_html(
         rain_prob_val = 0
 
     wind_str = format_wind_speed(wind, unit, lang)
+    wind_class = get_wind_speed_class(wind)
     max_t_str = format_temperature(max_t, unit)
     min_t_str = format_temperature(min_t, unit)
 
@@ -181,7 +184,7 @@ def generate_day_card_html(
         f"<div class='temps'>{max_t_str} <span class='min'>/ {min_t_str}</span></div>"
         "<div class='meta'>"
         f"<span title='{t['card_rain_chance']}'>💧 {rain_prob_val}%</span>"
-        f"<span title='{t['card_wind']}'>💨 {wind_str}</span>"
+        f"<span class='{wind_class}' title='{t['card_wind']}'>💨 {wind_str}</span>"
         "</div>"
         "</div>"
     )

@@ -10,7 +10,7 @@ from weather_app.alerts import (
     summarize_segment_risk,
 )
 from weather_app.config import GEOCODING_API_URL, REVERSE_GEOCODING_API_URL, WEATHER_API_URL
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wind_speed_class, get_wmo_info, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.weather_api import build_location_from_coordinates, get_coordinates, get_weather_data, reverse_geocode
 
@@ -380,6 +380,22 @@ def test_format_wind_speed():
     assert format_wind_speed(None, "F") == "-- mph"
 
 
+def test_get_wind_speed_class_tiers():
+    """Wind severity tiers must classify off the raw km/h figure: calm gets no
+    class, and each higher band gets a progressively stronger one."""
+    assert get_wind_speed_class(19.9) == ""
+    assert get_wind_speed_class(20.0) == "wind-breezy"
+    assert get_wind_speed_class(39.9) == "wind-breezy"
+    assert get_wind_speed_class(40.0) == "wind-strong"
+    assert get_wind_speed_class(69.9) == "wind-strong"
+    assert get_wind_speed_class(70.0) == "wind-severe"
+
+
+def test_get_wind_speed_class_missing_value():
+    """A missing wind reading must not be misclassified as a severity tier."""
+    assert get_wind_speed_class(None) == ""
+
+
 def test_generate_hour_card_html_smoke():
     """Smoke test for the 24h-strip hour card, including the weather-icon
     tooltip and the rain-chance/wind tooltips that label what the
@@ -392,6 +408,16 @@ def test_generate_hour_card_html_smoke():
     assert "💧 10%" in result
     assert "title='Wind'" in result
     assert "💨 15.0 km/h" in result
+
+
+def test_generate_hour_card_html_wind_severity_class():
+    """The wind reading gets a severity class that scales with how strong the
+    wind is, and calm wind gets no class at all."""
+    calm = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0, wind=10.0)
+    assert "wind-breezy" not in calm and "wind-strong" not in calm and "wind-severe" not in calm
+
+    severe = generate_hour_card_html("2024-01-01T14:00", 0, 10, 20.0, wind=80.0)
+    assert "wind-severe" in severe
 
 
 def test_generate_hour_card_html_shows_next_day_badge_when_date_differs():
@@ -454,6 +480,13 @@ def test_generate_day_card_html_smoke():
     assert "day-card" in result
     assert "title='Rain chance'" in result
     assert "title='Wind'" in result
+
+
+def test_generate_day_card_html_wind_severity_class():
+    """The wind reading on the 7-day card gets the same severity class scale
+    as the hour card."""
+    result = generate_day_card_html("2024-01-01", 0, 10, wind=45.0, max_t=20.0, min_t=10.0)
+    assert "wind-strong" in result
 
 
 def test_generate_day_card_html_wind_converts_to_mph_under_fahrenheit():
@@ -527,6 +560,13 @@ def test_generate_forecast_row_html_smoke():
     assert "row-14" in result
     assert "title='Rain chance'" in result
     assert "title='Wind'" in result
+
+
+def test_generate_forecast_row_html_wind_severity_class():
+    """The wind reading in the 14-day row gets the same severity class scale
+    as the hour/day cards."""
+    result = generate_forecast_row_html("2024-01-01", 0, 10, wind=90.0, max_t=20.0, min_t=10.0)
+    assert "wind-severe" in result
 
 
 def test_generate_forecast_row_html_wind_converts_to_mph_under_fahrenheit():

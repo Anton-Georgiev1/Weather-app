@@ -10,7 +10,7 @@ from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, 
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wind_speed_class, get_wmo_info, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.storage import load_last_language, load_last_location, save_last_language, save_last_location
 from weather_app.theme import get_theme_css
@@ -343,6 +343,7 @@ def main():
             )
             wind_speed_val = curr.get("wind_speed_10m")
             wind_str = format_wind_speed(wind_speed_val, unit, lang)
+            wind_class = get_wind_speed_class(wind_speed_val)
             humidity_val = curr.get("relative_humidity_2m")
             humidity_str = f"{humidity_val}%" if humidity_val is not None else "--%"
             rain_chance_val = safe_get(daily, "precipitation_probability_max", 0)
@@ -370,7 +371,7 @@ def main():
                 "<div class='stat-grid'>"
                 f"<div class='stat-chip'><div class='label'>{t['card_day_max']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_max', 0), unit)}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_day_min']}</div><div class='value'>{format_temperature(safe_get(daily, 'temperature_2m_min', 0), unit)}</div></div>"
-                f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value'>{wind_str}</div></div>"
+                f"<div class='stat-chip'><div class='label'>{t['card_wind']}</div><div class='value {wind_class}'>{wind_str}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_hum']}</div><div class='value'>{humidity_str}</div></div>"
                 f"<div class='stat-chip'><div class='label'>{t['card_rain_chance']}</div><div class='value'>{rain_chance_str}</div></div>"
                 f"<div class='stat-chip' title='{t['card_rain_chance_soon_help']}'><div class='label'>{t['card_rain_chance_soon']}</div><div class='value'>{near_rain_chance_str}</div></div>"
