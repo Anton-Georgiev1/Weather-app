@@ -10,7 +10,7 @@ from weather_app.alerts import NEAR_TERM_LOOKAHEAD_HOURS, get_near_term_alerts, 
 from weather_app.config import SKYWATCH_URL
 from weather_app.data.seasons import SEASON_THEMES
 from weather_app.data.translations import TRANSLATIONS
-from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_time_of_day_segment, get_wmo_info, safe_get
+from weather_app.formatting import format_date, format_temperature, format_wind_speed, get_default_hour_time_filter, get_time_of_day_segment, get_wmo_info, safe_get
 from weather_app.render import generate_alert_html, generate_day_card_html, generate_forecast_row_html, generate_hour_card_html, generate_segment_risk_html
 from weather_app.storage import load_last_language, load_last_location, save_last_language, save_last_location
 from weather_app.theme import get_theme_css
@@ -411,8 +411,7 @@ def main():
                     "night": t["time_filter_night"],
                 }
                 if "hour_time_filter" not in st.session_state:
-                    current_segment = get_time_of_day_segment(current_time) if current_time else None
-                    st.session_state.hour_time_filter = current_segment or "all"
+                    st.session_state.hour_time_filter = get_default_hour_time_filter(current_time)
                 st.session_state.hour_time_filter = st.pills(
                     t["time_filter_label"],
                     options=time_filter_keys,

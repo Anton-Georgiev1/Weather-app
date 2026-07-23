@@ -76,6 +76,12 @@ def get_time_of_day_segment(time_str: str) -> str | None:
         return "evening"
     return "night"
 
+def get_default_hour_time_filter(current_time: str | None) -> str:
+    """Pick the hour-of-day pill to preselect, defaulting to the current time's segment."""
+    if not current_time:
+        return "all"
+    return get_time_of_day_segment(current_time) or "all"
+
 def safe_get(data_dict: dict[str, Any] | None, key: str, idx: int, default: Any = None) -> Any:
     """Safely fetch index from dictionary arrays to prevent IndexErrors on missing API data."""
     if not isinstance(data_dict, dict):
