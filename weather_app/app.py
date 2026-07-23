@@ -427,23 +427,30 @@ def main():
                     "night": t["time_filter_night"],
                 }
                 default_hour_time_filter = get_default_hour_time_filter(current_time)
-                st.session_state.hour_time_filter = resolve_hour_time_filter(
-                    st.session_state.get("hour_time_filter"),
+                # Read the pill's own key, not the "hour_time_filter" mirror below --
+                # on the run where the user just clicked a new pill, Streamlit has
+                # already applied that click to hour_time_filter_pills before this
+                # code runs, while the mirror still holds the *previous* run's value.
+                # Resolving against the stale mirror would see "still equals the old
+                # auto segment" and silently overwrite the click that just happened.
+                current_pill_value = st.session_state.get("hour_time_filter_pills")
+                resolved_hour_time_filter = resolve_hour_time_filter(
+                    current_pill_value,
                     st.session_state.get("hour_time_filter_auto_segment"),
                     default_hour_time_filter,
                 )
-                # A widget's own key always wins over `default=` once it has been
-                # rendered once, so the pre-set here is what actually re-syncs the
-                # pill display on refresh -- `default=` below only matters the very
-                # first time this widget's key is seen.
-                if st.session_state.hour_time_filter == default_hour_time_filter:
-                    st.session_state.hour_time_filter_pills = default_hour_time_filter
+                if resolved_hour_time_filter != current_pill_value:
+                    st.session_state.hour_time_filter_pills = resolved_hour_time_filter
                 st.session_state.hour_time_filter_auto_segment = default_hour_time_filter
+                # No `default=` here: hour_time_filter_pills (this widget's own key) is
+                # always pre-set above before this call, either freshly this run or by
+                # its own prior render, so a default would be redundant -- and passing
+                # one anyway is exactly what triggers Streamlit's "default value but
+                # also set via Session State" warning.
                 st.session_state.hour_time_filter = st.pills(
                     t["time_filter_label"],
                     options=time_filter_keys,
                     format_func=lambda key: time_filter_labels[key],
-                    default=st.session_state.hour_time_filter,
                     required=True,
                     label_visibility="collapsed",
                     key="hour_time_filter_pills",
